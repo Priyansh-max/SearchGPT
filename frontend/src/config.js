@@ -5,7 +5,7 @@
 // API configuration
 export const API_CONFIG = {
   // Base URL for API requests - change for different environments
-  BASE_URL: 'https://searchgpt-nb8h.onrender.com/api',
+  BASE_URL: 'https://searchgpt-36z2.onrender.com/api',
   
   // Timeout for API requests in milliseconds
   TIMEOUT: 60000, // 60 seconds
