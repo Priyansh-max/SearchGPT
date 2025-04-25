@@ -9,7 +9,7 @@ import newspaper
 from newspaper import Article
 import time
 
-from utils.selenium_utils import browser
+from utils.playwright_utils import browser
 from utils.text_utils import TextProcessor
 from config import settings
 from services.web_searcher import WebSearcher
@@ -86,9 +86,9 @@ class ContentExtractor:
                 content = article.text
                 title = article.title
                 
-                # If content is too short, try with Selenium
+                # If content is too short, try with Playwright
                 if len(content) < 500:
-                    raise Exception("Content too short, trying with Selenium")
+                    raise Exception("Content too short, trying with Playwright")
                     
                 metadata = {
                     "published_date": article.publish_date.isoformat() if article.publish_date else None,
@@ -99,9 +99,9 @@ class ContentExtractor:
                 }
                 
             except Exception as e:
-                logger.info(f"Newspaper3k extraction failed: {str(e)}, trying Selenium")
+                logger.info(f"Newspaper3k extraction failed: {str(e)}, trying Playwright")
                 
-                # Navigate to URL with Selenium
+                # Navigate to URL with Playwright
                 success = await browser.navigate(url)
                 if not success:
                     raise Exception(f"Failed to navigate to {url}")
@@ -149,7 +149,7 @@ class ContentExtractor:
                 content = self.text_processor.extract_main_content(content)
                 
                 metadata = {
-                    "extraction_method": "selenium",
+                    "extraction_method": "playwright",
                     "url": await browser.get_current_url(),  # In case of redirects
                 }
             

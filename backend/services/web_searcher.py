@@ -4,7 +4,7 @@ import re
 from typing import List, Dict, Any
 from pydantic import BaseModel
 
-from utils.selenium_utils import browser
+from utils.playwright_utils import browser
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -67,9 +67,9 @@ class WebSearcher:
             await browser.navigate("https://www.google.com")
             
             # Input the query but don't submit
-            search_box = browser.driver.find_element_by_name("q")
-            search_box.clear()
-            search_box.send_keys(query)
+            search_box = await browser.page.query_selector('input[name="q"]')
+            await search_box.fill("")
+            await search_box.fill(query)
             
             # Wait for suggestions to appear
             await asyncio.sleep(1)
@@ -77,11 +77,11 @@ class WebSearcher:
             # Get suggestions
             suggestions = []
             try:
-                suggestion_elements = browser.driver.find_elements_by_css_selector("li.sbct")
+                suggestion_elements = await browser.page.query_selector_all("li.sbct")
                 for element in suggestion_elements:
-                    text_element = element.find_element_by_css_selector("div.wM6W7d")
+                    text_element = await element.query_selector("div.wM6W7d")
                     if text_element:
-                        suggestions.append(text_element.text)
+                        suggestions.append(await text_element.inner_text())
             except Exception as e:
                 logger.warning(f"Error extracting suggestions: {str(e)}")
                 
