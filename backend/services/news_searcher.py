@@ -9,7 +9,6 @@ import aiohttp
 import os
 import urllib.parse
 
-from utils.playwright_utils import browser
 from config import settings
 from services.query_analyzer import QueryAnalyzer
 from services.web_searcher import WebSearcher

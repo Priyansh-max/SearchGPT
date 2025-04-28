@@ -1,10 +1,16 @@
 import logging
 import asyncio
 import re
+import time
+import os
 from typing import List, Dict, Any
 from pydantic import BaseModel
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-from utils.playwright_utils import browser
+from utils.selenium_utils import browser
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -56,36 +62,77 @@ class WebSearcher:
     async def get_search_suggestions(self, query: str) -> List[str]:
         """
         Get search suggestions for a query
-        NOTE: This would be better implemented using an API, but
-        this shows how to extract auto-suggestions using Selenium as a fallback
         """
         if not query:
             return []
             
         try:
+            # Make sure browser is started
+            if not browser.driver:
+                await browser.start()
+                
             # Navigate to Google
             await browser.navigate("https://www.google.com")
             
-            # Input the query but don't submit
-            search_box = await browser.page.query_selector('input[name="q"]')
-            await search_box.fill("")
-            await search_box.fill(query)
-            
-            # Wait for suggestions to appear
-            await asyncio.sleep(1)
-            
-            # Get suggestions
-            suggestions = []
+            # Wait for search box to appear
             try:
-                suggestion_elements = await browser.page.query_selector_all("li.sbct")
-                for element in suggestion_elements:
-                    text_element = await element.query_selector("div.wM6W7d")
-                    if text_element:
-                        suggestions.append(await text_element.inner_text())
+                search_box = WebDriverWait(browser.driver, 10).until(
+                    EC.presence_of_element_located((By.NAME, "q"))
+                )
+                
+                # Type slowly like a human
+                search_box.clear()
+                for char in query:
+                    search_box.send_keys(char)
+                    time.sleep(0.1)  # Small delay between keypresses
+                
+                # Wait for suggestions to appear
+                time.sleep(2)
+                
+                # Try different selectors for suggestions
+                suggestions = []
+                selectors = [
+                    "li.sbct",
+                    "div.wM6W7d",
+                    "ul.G43f7e li",
+                    "ul[role='listbox'] li",
+                    "div.UUbT9 div.aypzV",
+                    "div.OBMEnb ul li"
+                ]
+                
+                for selector in selectors:
+                    try:
+                        elements = browser.driver.find_elements(By.CSS_SELECTOR, selector)
+                        if elements:
+                            for element in elements:
+                                try:
+                                    # Try to get inner text element
+                                    text_element = element.find_element(By.CSS_SELECTOR, "div.wM6W7d, span.G43f7e")
+                                    suggestion_text = text_element.text.strip()
+                                except:
+                                    # If can't find text element, use the element's own text
+                                    suggestion_text = element.text.strip()
+                                    
+                                if suggestion_text and suggestion_text not in suggestions:
+                                    suggestions.append(suggestion_text)
+                            
+                            if suggestions:
+                                logger.info(f"Found {len(suggestions)} suggestions using selector: {selector}")
+                                break
+                    except Exception as e:
+                        logger.debug(f"Error with selector {selector}: {str(e)}")
+                
+                # Take a screenshot for debugging
+                debug_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "debug")
+                os.makedirs(debug_dir, exist_ok=True)
+                browser.driver.save_screenshot(os.path.join(debug_dir, "suggestions.png"))
+                
+                return suggestions[:10]  # Return at most 10 suggestions
+                
             except Exception as e:
                 logger.warning(f"Error extracting suggestions: {str(e)}")
+                return []
                 
-            return suggestions
         except Exception as e:
             logger.error(f"Error getting search suggestions: {str(e)}")
             return []

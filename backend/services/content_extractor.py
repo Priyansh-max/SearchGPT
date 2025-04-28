@@ -9,7 +9,7 @@ import newspaper
 from newspaper import Article
 import time
 
-from utils.playwright_utils import browser
+from utils.selenium_utils import browser
 from utils.text_utils import TextProcessor
 from config import settings
 from services.web_searcher import WebSearcher
