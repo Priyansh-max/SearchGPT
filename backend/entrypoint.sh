@@ -53,7 +53,7 @@ echo "Environment:"
 echo "DISPLAY=$DISPLAY"
 echo "PYTHONUNBUFFERED=$PYTHONUNBUFFERED"
 echo "SELENIUM_HEADLESS=${SELENIUM_HEADLESS:-true}"
-echo "SELENIUM_TIMEOUT=${SELENIUM_TIMEOUT:-30}"
+echo "SELENIUM_TIMEOUT=${SELENIUM_TIMEOUT:-300}"
 
 echo "Starting application..."
 exec gunicorn app:app --bind 0.0.0.0:8000 --worker-class uvicorn.workers.UvicornWorker --timeout 300 --workers 1 
