@@ -7,11 +7,16 @@ services:
       - "8000:8000"
     environment:
       - DEBUG=False
+      - SELENIUM_HEADLESS=True
       - SELENIUM_TIMEOUT=120
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SEARCH_RESULTS_LIMIT=20
       - MAX_PAGES_TO_SCRAPE=20
       - PYTHONUNBUFFERED=1
+      - DISPLAY=:99
     volumes:
       - ./debug:/app/debug
+    shm_size: 2gb
     restart: unless-stopped
