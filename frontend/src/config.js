@@ -4,9 +4,7 @@
 
 // API configuration
 export const API_CONFIG = {
-  // Base URL for API requests - change for different environments
-  BASE_URL: 'https://searchgpt-1h5g.onrender.com/api',
-  // BASE_URL: 'http://localhost:8000/api',
+  BASE_URL: import.meta.env.VITE_BACKEND_URL,
   
   // Timeout for API requests in milliseconds
   TIMEOUT: 60000, // 60 seconds
