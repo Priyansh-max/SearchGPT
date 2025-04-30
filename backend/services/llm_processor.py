@@ -187,7 +187,7 @@ class LLMProcessor:
             
             Please synthesize this information into a comprehensive response to the user's query.
             Your response should:
-            1. Directly output the scrapped content in a well-formatted manner
+            1. Directly output the content in a way how a scrapper would output the content
             2. output what is asked by the user exactly as it is
             3. End with a "References" section at the end with numbered links to the scrapped content
             4. Do not add any additional text or explanations
@@ -378,6 +378,10 @@ class LLMProcessor:
             3. Provide context and background if relevant
             4. Cite sources for key information (use the format [1], [2], etc.)
             5. Include a "References" section at the end with numbered links to articles
+            6. For each reference, format it as: [Title] - [Source] ([Date]) with a "Read more" link to the URL
+            
+            Example reference format:
+            1. Article Title - News Source (Publication Date) [Read more](URL)
             
             Format your response in Markdown for readability.
             """
@@ -445,11 +449,13 @@ class LLMProcessor:
         formatted = f"Here are the latest news articles for \"{query}\":\n\n"
         
         for i, article in enumerate(results):
+            title = article.get('title', 'No title')
+            source = article.get('source', 'Unknown source')
             date = article.get('published_date', 'Unknown date')
-            formatted += f"{i + 1}. **{article.get('title', 'No title')}**\n"
-            formatted += f"   *{article.get('source', 'Unknown source')}* | {date}\n"
-            formatted += f"   {article.get('snippet', 'No snippet available')}\n"
-            formatted += f"   [Read more]({article.get('url', '')})\n\n"
+            url = article.get('url', '')
+            
+            formatted += f"{i + 1}. **{title}** - *{source}* ({date}) [Read more]({url})\n\n"
+            formatted += f"   {article.get('snippet', 'No snippet available')}\n\n"
             
         return formatted
 
