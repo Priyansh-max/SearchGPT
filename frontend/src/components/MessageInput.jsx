@@ -33,7 +33,7 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder={isDisabled ? "Processing request..." : "What do you want to know? (Ctrl+Enter to send)"}
+                placeholder={isDisabled ? "Processing request..." : "What do you want to know?"}
                 className="w-full bg-gray-800 border-0 text-white outline-none resize-none overflow-hidden min-h-[20px] break-words"
                 rows={1}
                 disabled={isDisabled}

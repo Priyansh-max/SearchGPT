@@ -43,14 +43,18 @@ function App() {
   
   // Handle key press in textarea
   const handleKeyPress = (e) => {
-    // Submit form on Ctrl+Enter or Cmd+Enter
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      if (query.trim()) {
-        sendMessage(query);
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        return;
+      } else {
+        e.preventDefault(); // prevent newline
+        if (query.trim()) {
+          sendMessage(query);
+        }
       }
-      e.preventDefault();
     }
   };
+  
   
   // Common message sending logic
   const sendMessage = async (text) => {
@@ -92,6 +96,12 @@ function App() {
       } else {
         // If no tool selected, provide a general response
         setLoadingMessage("Processing your request");
+
+        //add a delay of 4 seconds before showing the loading message
+        const number = Math.random() * (3-1) + 1;
+        console.log(number);
+        await new Promise(resolve => setTimeout(resolve, number * 1000));
+
         formattedResponse = getDefaultResponse(text);
       }
       
