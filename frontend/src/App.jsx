@@ -86,7 +86,7 @@ function App() {
         response = await scrapeWebContent(text);
         formattedResponse = formatScraperResults(response);
       } else if (selectedTool === 'analyzer') {
-        setLoadingMessage("Analyzing content from multiple sources");
+        setLoadingMessage("Analyzing content from multiple sources on the internet");
         response = await analyzeContent(text);
         formattedResponse = formatAnalyzerResults(response);
       } else if (selectedTool === 'news') {
