@@ -8,7 +8,7 @@ lxml==4.9.3
 python-dotenv==1.0.0
 newspaper3k==0.2.8
 nltk==3.8.1
-spacy==3.7.2
+spacy==3.4.4  # Older, more stable version
 pydantic==2.4.2
 httpx==0.25.1
 html2text==2020.1.16
@@ -16,5 +16,4 @@ pandas==2.1.1
 aiohttp==3.11.18
 python-multipart==0.0.6
 google-generativeai==0.3.1
-# Add dependencies for deployment
-gunicorn==21.2.0 
+gunicorn==21.2.0
