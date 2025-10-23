@@ -39,9 +39,17 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers
-RUN playwright install chromium
+# Install fonts that Playwright expects but renamed in Debian 13
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        fonts-unifont \
+        fonts-ubuntu \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install Playwright dependencies and Chromium
 RUN playwright install-deps chromium
+RUN playwright install chromium
+
 
 # Download NLTK data
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('averaged_perceptron_tagger')"
