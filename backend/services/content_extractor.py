@@ -9,10 +9,10 @@ import newspaper
 from newspaper import Article
 import time
 
-from utils.selenium_utils import browser
+from utils.playwright_utils import playwright_browser
 from utils.text_utils import TextProcessor
 from config import settings
-from services.web_searcher import WebSearcher
+from services.web_searcher import web_searcher
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,13 @@ class ScraperResult(BaseModel):
 
 class ContentExtractor:
     """
-    Service to extract content from web pages
+    Service to extract content from web pages using Playwright
     """
     
     def __init__(self):
-        self.web_searcher = WebSearcher()
+        self.web_searcher = web_searcher
         self.text_processor = TextProcessor()
+        self.browser = playwright_browser
         
     async def extract_from_search_results(self, search_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -69,7 +70,7 @@ class ContentExtractor:
     
     async def extract_from_url(self, url: str) -> Dict[str, Any]:
         """
-        Extract content from a URL
+        Extract content from a URL using Playwright
         """
         if not url:
             return None
@@ -102,7 +103,7 @@ class ContentExtractor:
                 logger.info(f"Newspaper3k extraction failed: {str(e)}, trying Playwright")
                 
                 # Navigate to URL with Playwright
-                success = await browser.navigate(url)
+                success = await self.browser.navigate(url)
                 if not success:
                     raise Exception(f"Failed to navigate to {url}")
                     
@@ -110,15 +111,20 @@ class ContentExtractor:
                 await asyncio.sleep(2)
                 
                 # Scroll to load all content
-                await browser.scroll_to_bottom(scroll_pause_time=0.5)
+                try:
+                    await self.browser.scroll_to_bottom(scroll_pause_time=0.5)
+                except Exception as e:
+                    logger.warning(f"Error while scrolling, continuing anyway: {str(e)}")
                 
                 # Get page source
-                html = await browser.get_page_source()
+                html = await self.browser.get_page_source()
                 if not html:
                     raise Exception("Failed to get page source")
                     
                 # Parse with BeautifulSoup
                 soup = BeautifulSoup(html, 'lxml')
+                if not soup:
+                    raise Exception("Failed to parse HTML with BeautifulSoup")
                 
                 # Extract title
                 title_tag = soup.find('title')
@@ -129,18 +135,30 @@ class ContentExtractor:
                 
                 # Look for common content containers
                 for selector in ['article', 'main', '.content', '#content', '.post', '.article', '.entry']:
-                    container = soup.select_one(selector)
-                    if container and len(container.text.strip()) > 500:
-                        main_content = container
-                        break
+                    try:
+                        container = soup.select_one(selector)
+                        if container and len(container.text.strip()) > 500:
+                            main_content = container
+                            break
+                    except (AttributeError, Exception) as e:
+                        logger.warning(f"Error selecting {selector}: {str(e)}")
+                        continue
                 
                 # If no container found, use body
                 if not main_content:
                     main_content = soup.find('body')
                 
+                # If we still don't have a main content container, use the entire soup
+                if not main_content:
+                    logger.warning(f"No main content container found for {url}, using entire document")
+                    main_content = soup
+                
                 # Remove navigation, sidebars, footers, etc.
-                for tag in main_content.select('nav, header, footer, sidebar, .sidebar, .navigation, .footer, .header, .nav, .menu, .comments, .comment, script, style, [role=banner], [role=navigation]'):
-                    tag.decompose()
+                try:
+                    for tag in main_content.select('nav, header, footer, sidebar, .sidebar, .navigation, .footer, .header, .nav, .menu, .comments, .comment, script, style, [role=banner], [role=navigation]'):
+                        tag.decompose()
+                except (AttributeError, Exception) as e:
+                    logger.warning(f"Error removing tags: {str(e)}")
                 
                 # Convert to text
                 content = self.text_processor.html_to_text(str(main_content))
@@ -150,7 +168,7 @@ class ContentExtractor:
                 
                 metadata = {
                     "extraction_method": "playwright",
-                    "url": await browser.get_current_url(),  # In case of redirects
+                    "url": await self.browser.get_current_url(),  # In case of redirects
                 }
             
             # Create result
@@ -167,6 +185,33 @@ class ContentExtractor:
             logger.error(f"Error extracting content from {url}: {str(e)}")
             raise e
     
+    async def extract_multiple_urls(self, urls: List[str]) -> List[Dict[str, Any]]:
+        """
+        Extract content from multiple URLs concurrently
+        """
+        if not urls:
+            return []
+            
+        logger.info(f"Extracting content from {len(urls)} URLs concurrently")
+        
+        # Create tasks for concurrent extraction
+        tasks = []
+        for url in urls:
+            tasks.append(self.extract_from_url(url))
+        
+        # Run tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Filter out errors
+        valid_results = []
+        for result in results:
+            if isinstance(result, Exception):
+                logger.warning(f"Error in concurrent extraction: {str(result)}")
+            elif result:
+                valid_results.append(result)
+        
+        return valid_results
+    
     async def extract_structured_data(self, html: str) -> Dict[str, Any]:
         """
         Extract structured data (JSON-LD, etc.) from HTML
@@ -179,20 +224,37 @@ class ContentExtractor:
             
             # Parse HTML
             soup = BeautifulSoup(html, 'lxml')
+            if not soup:
+                return {}
             
             # Find JSON-LD scripts
-            json_ld_scripts = soup.find_all('script', type='application/ld+json')
-            for script in json_ld_scripts:
-                try:
-                    import json
-                    data = json.loads(script.string)
-                    if '@type' in data:
-                        structured_data[data['@type']] = data
-                except Exception as e:
-                    logger.warning(f"Error parsing JSON-LD: {str(e)}")
+            try:
+                json_ld_scripts = soup.find_all('script', type='application/ld+json')
+                for script in json_ld_scripts:
+                    try:
+                        import json
+                        data = json.loads(script.string)
+                        if '@type' in data:
+                            structured_data[data['@type']] = data
+                    except Exception as e:
+                        logger.warning(f"Error parsing JSON-LD: {str(e)}")
+            except Exception as e:
+                logger.warning(f"Error finding JSON-LD scripts: {str(e)}")
                     
             return structured_data
             
         except Exception as e:
             logger.error(f"Error extracting structured data: {str(e)}")
-            return {} 
+            return {}
+    
+    async def cleanup(self):
+        """
+        Clean up resources
+        """
+        try:
+            await self.browser.stop()
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
+
+# Create a singleton instance
+content_extractor = ContentExtractor() 

@@ -1,171 +1,194 @@
 import logging
 import asyncio
+from typing import List, Dict, Any, Optional
 import re
-import time
-import os
-from typing import List, Dict, Any
-from pydantic import BaseModel
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-from utils.selenium_utils import browser
+from urllib.parse import urlparse
+from services.serpapi_searcher import serpapi_searcher
 from config import settings
 
 logger = logging.getLogger(__name__)
 
-class SearchResult(BaseModel):
-    title: str
-    snippet: str
-    url: str
-    position: int
-
 class WebSearcher:
     """
-    Service to search the web using Google
+    Service to perform web searches using SerpAPI (replacing Selenium-based search)
     """
     
     def __init__(self):
-        pass
+        self.serpapi_searcher = serpapi_searcher
+        self.max_results = settings.SEARCH_RESULTS_LIMIT
         
-    async def search(self, query: str) -> List[Dict[str, Any]]:
+    async def search(self, query: str, engine: str = "google", num_results: int = None) -> List[Dict[str, Any]]:
         """
-        Search the web using Google and return results
-        """
-        if not query:
-            return []
-            
-        try:
-            logger.info(f"Searching for: {query}")
-            
-            # Perform Google search
-            search_results = await browser.search_google(query)
-            
-            # Convert to standardized format
-            formatted_results = []
-            for result in search_results:
-                formatted_results.append({
-                    "title": result.get("title", "No title"),
-                    "snippet": result.get("snippet", "No description available"),
-                    "url": result.get("url", ""),
-                    "position": result.get("position", 0)
-                })
-                
-            logger.info(f"Found {len(formatted_results)} search results")
-            return formatted_results
-            
-        except Exception as e:
-            logger.error(f"Error searching the web: {str(e)}")
-            return []
-            
-    async def get_search_suggestions(self, query: str) -> List[str]:
-        """
-        Get search suggestions for a query
+        Perform a web search using SerpAPI
         """
         if not query:
             return []
             
         try:
-            # Make sure browser is started
-            if not browser.driver:
-                await browser.start()
-                
-            # Navigate to Google
-            await browser.navigate("https://www.google.com")
+            logger.info(f"Performing web search for: {query}")
             
-            # Wait for search box to appear
-            try:
-                search_box = WebDriverWait(browser.driver, 10).until(
-                    EC.presence_of_element_located((By.NAME, "q"))
-                )
-                
-                # Type slowly like a human
-                search_box.clear()
-                for char in query:
-                    search_box.send_keys(char)
-                    time.sleep(0.1)  # Small delay between keypresses
-                
-                # Wait for suggestions to appear
-                time.sleep(2)
-                
-                # Try different selectors for suggestions
-                suggestions = []
-                selectors = [
-                    "li.sbct",
-                    "div.wM6W7d",
-                    "ul.G43f7e li",
-                    "ul[role='listbox'] li",
-                    "div.UUbT9 div.aypzV",
-                    "div.OBMEnb ul li"
-                ]
-                
-                for selector in selectors:
-                    try:
-                        elements = browser.driver.find_elements(By.CSS_SELECTOR, selector)
-                        if elements:
-                            for element in elements:
-                                try:
-                                    # Try to get inner text element
-                                    text_element = element.find_element(By.CSS_SELECTOR, "div.wM6W7d, span.G43f7e")
-                                    suggestion_text = text_element.text.strip()
-                                except:
-                                    # If can't find text element, use the element's own text
-                                    suggestion_text = element.text.strip()
-                                    
-                                if suggestion_text and suggestion_text not in suggestions:
-                                    suggestions.append(suggestion_text)
-                            
-                            if suggestions:
-                                logger.info(f"Found {len(suggestions)} suggestions using selector: {selector}")
-                                break
-                    except Exception as e:
-                        logger.debug(f"Error with selector {selector}: {str(e)}")
-                
-                # Take a screenshot for debugging
-                debug_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "debug")
-                os.makedirs(debug_dir, exist_ok=True)
-                browser.driver.save_screenshot(os.path.join(debug_dir, "suggestions.png"))
-                
-                return suggestions[:10]  # Return at most 10 suggestions
-                
-            except Exception as e:
-                logger.warning(f"Error extracting suggestions: {str(e)}")
-                return []
-                
+            # Use SerpAPI for search
+            results = await self.serpapi_searcher.search(query, engine, num_results)
+            
+            # Filter and validate results
+            filtered_results = []
+            for result in results:
+                if self.is_valid_url(result.get("url", "")):
+                    filtered_results.append(result)
+            
+            logger.info(f"Found {len(filtered_results)} valid search results")
+            return filtered_results
+            
         except Exception as e:
-            logger.error(f"Error getting search suggestions: {str(e)}")
+            logger.error(f"Error performing web search: {str(e)}")
             return []
     
-    async def extract_urls_from_results(self, results: List[Dict[str, Any]]) -> List[str]:
+    async def search_google(self, query: str, num_results: int = None) -> List[Dict[str, Any]]:
+        """
+        Search Google specifically
+        """
+        return await self.search(query, "google", num_results)
+    
+    async def search_bing(self, query: str, num_results: int = None) -> List[Dict[str, Any]]:
+        """
+        Search Bing specifically
+        """
+        return await self.search(query, "bing", num_results)
+    
+    async def extract_urls_from_results(self, search_results: List[Dict[str, Any]]) -> List[str]:
         """
         Extract URLs from search results
         """
-        return [result["url"] for result in results if result.get("url")]
+        urls = []
+        for result in search_results:
+            url = result.get("url", "")
+            if url and self.is_valid_url(url):
+                urls.append(url)
+        return urls
     
     def is_valid_url(self, url: str) -> bool:
         """
-        Check if a URL is valid and allowed
+        Check if URL is valid and not blacklisted
         """
         if not url:
             return False
             
-        # Check for common valid URL patterns
-        if not re.match(r'^https?://', url):
-            return False
+        try:
+            parsed = urlparse(url)
             
-        # Check for disallowed domains (common SEO spam, etc.)
-        disallowed_domains = [
-            'pinterest.com',  # Often not helpful for information
-            'quora.com',      # Requires login
-            'reddit.com',     # Often not structured well for scraping
-            'facebook.com',   # Social media
-            'twitter.com',    # Social media
-            'instagram.com',  # Social media
-        ]
-        
-        for domain in disallowed_domains:
-            if domain in url:
+            # Must have scheme and netloc
+            if not parsed.scheme or not parsed.netloc:
                 return False
+            
+            # Must be http or https
+            if parsed.scheme not in ['http', 'https']:
+                return False
+            
+            # Blacklisted domains/patterns
+            blacklisted_patterns = [
+                r'\.pdf$',
+                r'\.doc$',
+                r'\.docx$',
+                r'\.xls$',
+                r'\.xlsx$',
+                r'\.ppt$',
+                r'\.pptx$',
+                r'\.zip$',
+                r'\.rar$',
+                r'\.tar$',
+                r'\.gz$',
+                r'javascript:',
+                r'mailto:',
+                r'tel:',
+                r'ftp:',
+                r'file:',
+            ]
+            
+            blacklisted_domains = [
+                'facebook.com',
+                'twitter.com',
+                'instagram.com',
+                'linkedin.com',
+                'pinterest.com',
+                'youtube.com',
+                'tiktok.com',
+                'snapchat.com',
+            ]
+            
+            # Check against blacklisted patterns
+            for pattern in blacklisted_patterns:
+                if re.search(pattern, url.lower()):
+                    return False
+            
+            # Check against blacklisted domains
+            for domain in blacklisted_domains:
+                if domain in parsed.netloc.lower():
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Error validating URL {url}: {str(e)}")
+            return False
+    
+    def clean_url(self, url: str) -> str:
+        """
+        Clean and normalize URL
+        """
+        if not url:
+            return ""
+            
+        try:
+            # Remove tracking parameters
+            tracking_params = [
+                'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+                'fbclid', 'gclid', 'msclkid', 'mc_cid', 'mc_eid',
+                '_ga', '_gid', '_gac', '_gl', '_gat',
+                'ref', 'referrer', 'source', 'campaign',
+            ]
+            
+            parsed = urlparse(url)
+            
+            # Remove fragment
+            cleaned_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+            
+            # Add query parameters (excluding tracking ones)
+            if parsed.query:
+                query_params = []
+                for param in parsed.query.split('&'):
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        if key.lower() not in tracking_params:
+                            query_params.append(param)
                 
-        return True 
+                if query_params:
+                    cleaned_url += '?' + '&'.join(query_params)
+            
+            return cleaned_url
+            
+        except Exception as e:
+            logger.warning(f"Error cleaning URL {url}: {str(e)}")
+            return url
+    
+    def get_domain(self, url: str) -> str:
+        """
+        Extract domain from URL
+        """
+        try:
+            parsed = urlparse(url)
+            return parsed.netloc.lower()
+        except Exception:
+            return ""
+    
+    def get_search_info(self) -> Dict[str, Any]:
+        """
+        Get information about the search configuration
+        """
+        return {
+            "search_engine": "SerpAPI",
+            "max_results": self.max_results,
+            "serpapi_info": self.serpapi_searcher.get_search_info(),
+        }
+
+# Create a singleton instance
+web_searcher = WebSearcher() 
