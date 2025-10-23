@@ -43,8 +43,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         fonts-unifont \
-        fonts-ubuntu \
-        && rm -rf /var/lib/apt/lists/*
+        fonts-dejavu \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Playwright dependencies and Chromium
 RUN playwright install-deps chromium
