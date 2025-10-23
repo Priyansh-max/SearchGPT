@@ -47,7 +47,26 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Playwright dependencies and Chromium
-RUN playwright install-deps chromium
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libnss3 \
+    libxshmfence1 \
+    fonts-unifont \
+    fonts-dejavu \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN playwright install chromium
 
 
