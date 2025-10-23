@@ -5,8 +5,8 @@ import logging
 
 # Import services
 from services.query_analyzer import QueryAnalyzer
-from services.web_searcher import WebSearcher
-from services.content_extractor import ContentExtractor
+from services.web_searcher import web_searcher
+from services.content_extractor import content_extractor
 from services.information_synthesizer import InformationSynthesizer
 from services.news_searcher import NewsSearcher
 from services.llm_processor import llm_processor
@@ -74,15 +74,13 @@ class NewsResponse(BaseModel):
 
 # Initialize service instances
 query_analyzer = QueryAnalyzer()
-web_searcher = WebSearcher()
-content_extractor = ContentExtractor()
 information_synthesizer = InformationSynthesizer()
 news_searcher = NewsSearcher()
 
 @router.post("/search", response_model=WebSearchResponse)
 async def search(query_data: QueryRequest):
     """
-    Perform a web search based on the user query
+    Perform a web search based on the user query using SerpAPI
     """
     logger.info(f"Web search request received: {query_data.query}")
     
@@ -97,7 +95,7 @@ async def search(query_data: QueryRequest):
                 refined_query = llm_refined_query
                 logger.info(f"Using LLM refined query: {refined_query}")
         
-        # Perform web search
+        # Perform web search using SerpAPI
         search_results = await web_searcher.search(refined_query)
         
         # Process results with LLM if enabled
@@ -119,7 +117,7 @@ async def search(query_data: QueryRequest):
 @router.post("/scrape", response_model=WebScraperResponse)
 async def scrape(query_data: QueryRequest):
     """
-    Scrape content from web pages based on search results from the query
+    Scrape content from web pages using Playwright based on search results
     """
     logger.info(f"Web scraper request received: {query_data.query}")
     
@@ -134,10 +132,10 @@ async def scrape(query_data: QueryRequest):
                 refined_query = llm_refined_query
                 logger.info(f"Using LLM refined query: {refined_query}")
             
-        # First search for relevant pages
+        # First search for relevant pages using SerpAPI
         search_results = await web_searcher.search(refined_query)
         
-        # Extract content from search results
+        # Extract content from search results using Playwright
         scraped_results = await content_extractor.extract_from_search_results(search_results)
         
         # Process scraped content with LLM if enabled
@@ -159,7 +157,7 @@ async def scrape(query_data: QueryRequest):
 @router.post("/analyze", response_model=ContentAnalyzerResponse)
 async def analyze(query_data: QueryRequest):
     """
-    Analyze content from multiple web sources to provide a comprehensive answer
+    Analyze content from multiple web sources using SerpAPI + Playwright
     """
     logger.info(f"Content analyzer request received: {query_data.query}")
     
@@ -174,10 +172,10 @@ async def analyze(query_data: QueryRequest):
                 refined_query = llm_refined_query
                 logger.info(f"Using LLM refined query: {refined_query}")
             
-        # Search for relevant content
+        # Search for relevant content using SerpAPI
         search_results = await web_searcher.search(refined_query)
         
-        # Extract content
+        # Extract content using Playwright
         scraped_results = await content_extractor.extract_from_search_results(search_results)
         
         # Synthesize information
