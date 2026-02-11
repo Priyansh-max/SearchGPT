@@ -10,10 +10,10 @@ const DottedGrid = ({ className = '' }) => {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const spacing = 30;
+    const spacing = 20;
     const baseSize = 1.2; // all dots same size
-    const maxGrowSize = 1.8; // how big a dot can grow
-    const growDuration = 3000; // ms for a dot to grow and shrink back (full cycle)
+    const maxGrowSize = 1.5; // how big a dot can grow
+    const growDuration = 2000; // ms for a dot to grow and shrink back (full cycle)
 
     // Detect dark mode
     const isDarkMode = () => {
@@ -27,7 +27,7 @@ const DottedGrid = ({ className = '' }) => {
       const rows = Math.ceil(rect.height / spacing) + 1;
 
       // Pick 2-5 random dots each interval
-      const count = 20 + Math.floor(Math.random() * 25);
+      const count = 40 + Math.floor(Math.random() * 45);
       for (let i = 0; i < count; i++) {
         const col = Math.floor(Math.random() * cols);
         const row = Math.floor(Math.random() * rows);
