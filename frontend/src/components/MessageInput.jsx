@@ -33,7 +33,8 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
               <ToolSelection 
                 selectedTool={selectedTool} 
                 setSelectedTool={setSelectedTool} 
-                includeSubmitButton={true} 
+                includeSubmitButton={true}
+                isDisabled={isDisabled}
               />
             </div>
           </div>

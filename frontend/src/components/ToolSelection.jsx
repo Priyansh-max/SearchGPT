@@ -13,7 +13,7 @@ const Tooltip = ({ text, children }) => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setCoords({
-        top: rect.bottom + 8,
+        top: rect.top - 8,
         left: rect.left + rect.width / 2,
       });
     }
@@ -22,7 +22,7 @@ const Tooltip = ({ text, children }) => {
   const show = () => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+      setCoords({ top: rect.top - 8, left: rect.left + rect.width / 2 });
     }
     setVisible(true);
   };
@@ -46,11 +46,12 @@ const Tooltip = ({ text, children }) => {
       style={{
         top: coords.top,
         left: coords.left,
+        transform: 'translate(-50%, -100%)',
       }}
     >
       <span
-        className="absolute left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900 dark:border-b-neutral-900"
-        style={{ bottom: '100%', marginBottom: '-1px' }}
+        className="absolute left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-neutral-900"
+        style={{ top: '100%', marginTop: '-1px' }}
       />
       {text}
     </span>
