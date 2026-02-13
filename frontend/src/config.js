@@ -24,7 +24,7 @@ export const UI_CONFIG = {
   // Default tool descriptions
   TOOL_DESCRIPTIONS: {
     search: "Search the web and retrieve relevant results",
-    scraper: "Extract data from websites for further analysis",
+    scraper: "Scrape raw data from any website of your choice",
     analyzer: "Analyze content from multiple sources to provide a comprehensive answer",
     news: "Find the latest news articles on any topic"
   },
