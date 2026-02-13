@@ -22,7 +22,7 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
               placeholder="Ask Anything"
               className={`w-full h-auto bg-transparent text-md outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px] ${
                 isDisabled
-                  ? 'text-gray-400 dark:text-gray-600 placeholder-gray-400 dark:placeholder-gray-600 cursor-not-allowed'
+                  ? 'text-gray-400 dark:text-neutral-500 placeholder-gray-400 dark:placeholder-neutral-600 cursor-not-allowed'
                   : 'text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400'
               }`}
               value={query}
