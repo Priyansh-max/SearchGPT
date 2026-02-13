@@ -13,41 +13,29 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
   }, [query]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4 z-10">
+    <div className="fixed bottom-0 left-0 right-0 bg-neutral-100 dark:bg-black border-t border-gray-200 dark:border-white/10 p-4 pb-4 z-10">
       <div className="mx-auto max-w-4xl">
         <form onSubmit={handleSendMessage} className="flex flex-col">
-          <div className="mb-3">
-            <div className="flex flex-nowrap overflow-x-auto hide-scrollbar pb-2">
+          <div className="border-2 border-gray-200 dark:border-neutral-800 rounded-lg p-4 shadow-lg dark:shadow-neutral-900 bg-white/10 dark:bg-white/5">
+            <textarea
+              ref={textareaRef}
+              placeholder="Ask Anything"
+              className="w-full h-auto bg-transparent text-md text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400  outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px]"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyPress}
+              rows={1}
+            />
+
+                
+                {/* Tool Selection with Send button inline */}
+            <div className="border-t border-gray-200 dark:border-neutral-800 pt-4">
               <ToolSelection 
                 selectedTool={selectedTool} 
-                setSelectedTool={setSelectedTool}
-                isDisabled={isDisabled}
+                setSelectedTool={setSelectedTool} 
+                includeSubmitButton={true} 
               />
             </div>
-          </div>
-          
-          <div className="flex">
-            <div className={`flex-1 bg-gray-800 rounded-l-lg p-2 ${isDisabled ? 'opacity-70' : ''}`}>
-              <textarea
-                ref={textareaRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder={isDisabled ? "Processing request..." : "What do you want to know?"}
-                className="w-full bg-gray-800 border-0 text-white outline-none resize-none overflow-hidden min-h-[20px] break-words"
-                rows={1}
-                disabled={isDisabled}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!query.trim() || isDisabled}
-              className={`px-4 rounded-r-lg bg-gray-800 flex items-center ${
-                query.trim() && !isDisabled ? 'text-blue-500' : 'text-gray-600'
-              } ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              <span className="material-icons">send</span>
-            </button>
           </div>
         </form>
       </div>

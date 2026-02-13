@@ -24,10 +24,10 @@ const ChatInterface = ({
   }, [messages, isLoading]);
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-neutral-100 dark:bg-black">
       {/* Header make this clickable and redirect to home page*/}
-      <header className="bg-gray-800 py-2 px-4 shadow-md mb-4 cursor-pointer" onClick={() => window.location.href = '/'}>
-        <h1 className="text-lg text-center font-medium">SearchGPT Agent</h1>
+      <header className="bg-white/10 dark:bg-neutral-900 py-2 px-4 shadow-md mb-4 cursor-pointer" onClick={() => window.location.href = '/'}>
+        <h1 className="text-base text-center font-medium text-black dark:text-white">SearchGPT Agent</h1>
       </header>
       
       {/* Full page scrollable area */}
@@ -53,11 +53,11 @@ const ChatInterface = ({
             {/* Typing indicator (bouncing dots) - only show when not loading */}
             {isTyping && !isLoading && (
               <div className="flex w-full mb-4 justify-start">
-                <div className="bg-gray-800 text-white rounded-lg rounded-tl-none p-4">
+                <div className="bg-white dark:bg-neutral-900 dark:text-white text-black rounded-lg rounded-tl-none p-2">
                   <div className="flex space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-gray-300 animate-bounce"></div>
-                    <div className="w-2 h-2 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    <div className="w-1 h-1 rounded-full bg-gray-300 animate-bounce"></div>
+                    <div className="w-1 h-1 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1 h-1 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                 </div>
               </div>

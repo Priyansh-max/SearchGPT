@@ -146,7 +146,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen">
       {messages.length === 0 ? (
         <LandingPage
           query={query}
