@@ -21,20 +21,29 @@ const LoadingIndicator = ({ startTime, message = "Searching the web" }) => {
   
   return (
     <div className="flex w-full mb-4 justify-start">
-      <div className="bg-gray-800 text-white rounded-lg rounded-tl-none p-4 max-w-[80%]">
-        <div className="flex items-center">
-          <span className="mr-2">{message}</span>
+      <div className="relative rounded-lg rounded-tl-none p-4 max-w-[80%]">
+        {/* Content */}
+        <div className="relative flex items-center">
+          <span 
+            className="mr-2 text-sm font-medium text-shimmer-light dark:text-shimmer-dark"
+            style={{
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 2s infinite',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {message}
+          </span>
           <div className="flex space-x-1">
-            <div className="w-2 h-2 rounded-full bg-gray-300 animate-bounce"></div>
-            <div className="w-2 h-2 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+            <div className="w-1 h-1 rounded-full bg-gray-600 dark:bg-neutral-600 animate-bounce"></div>
+            <div className="w-1 h-1 rounded-full bg-gray-600 dark:bg-neutral-600 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-1 h-1 rounded-full bg-gray-600 dark:bg-neutral-600 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
           </div>
-          <div className="ml-2 text-xs text-gray-400">
+          <div className="ml-2 text-[10px] text-gray-600 dark:text-neutral-600 font-mono tabular-nums">
             {formatTime(elapsedTime)}
           </div>
-        </div>
-        <div className="text-xs text-gray-400 mt-1">
-          This usually takes about a minute
         </div>
       </div>
     </div>
