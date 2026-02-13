@@ -249,7 +249,8 @@ const LandingPage = ({
                 <ToolSelection 
                   selectedTool={selectedTool} 
                   setSelectedTool={setSelectedTool} 
-                  includeSubmitButton={true} 
+                  includeSubmitButton={true}
+                  dropdownDirection="down"
                 />
               </div>
             </form>

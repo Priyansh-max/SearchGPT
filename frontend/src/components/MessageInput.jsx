@@ -20,11 +20,16 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
             <textarea
               ref={textareaRef}
               placeholder="Ask Anything"
-              className="w-full h-auto bg-transparent text-md text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400  outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px]"
+              className={`w-full h-auto bg-transparent text-md outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px] ${
+                isDisabled
+                  ? 'text-gray-400 dark:text-gray-600 placeholder-gray-400 dark:placeholder-gray-600 cursor-not-allowed'
+                  : 'text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400'
+              }`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyPress}
               rows={1}
+              disabled={isDisabled}
             />
 
                 
@@ -35,6 +40,7 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
                 setSelectedTool={setSelectedTool} 
                 includeSubmitButton={true}
                 isDisabled={isDisabled}
+                dropdownDirection="up"
               />
             </div>
           </div>
