@@ -159,17 +159,17 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
             type="button"
             onClick={handleToggleDropdown}
             disabled={isDisabled}
-            className={`flex items-center text-sm px-4 py-2 rounded-lg border transition-colors shrink-0 ${
+            className={`flex items-center text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-lg border transition-colors shrink-0 ${
               isDisabled
                 ? 'opacity-70 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-500'
                 : 'bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800'
             }`}
           >
             <div className="flex items-center">
-              <span className="material-icons text-sm mr-2">{selectedToolData.icon}</span>
+              <span className="material-icons text-xs sm:text-sm mr-1 sm:mr-2">{selectedToolData.icon}</span>
               {selectedToolData.label}
             </div>
-            <span className="material-icons text-sm ml-2">
+            <span className="material-icons text-xs sm:text-sm ml-1 sm:ml-2">
               {dropdownDirection === 'down' ? 'arrow_drop_down' : 'arrow_drop_up'}
             </span>
           </button>
@@ -179,14 +179,14 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
         {includeSubmitButton && (
           <button
             type="submit"
-            className={`flex items-center justify-center text-sm px-4 py-1 rounded-full border transition-colors shrink-0 ${
+            className={`flex items-center justify-center text-xs sm:text-sm px-3 sm:px-4 py-1 rounded-full border transition-colors shrink-0 ${
               isDisabled
                 ? 'opacity-70 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-500'
                 : 'bg-gray-800 text-white border-gray-900 hover:bg-gray-800 dark:bg-neutral-100 dark:text-gray-900 dark:border-white dark:hover:bg-gray-200'
             }`}
             disabled={isDisabled}
           >
-            <span className="material-icons text-sm mr-2">send</span> Send
+            <span className="material-icons text-xs sm:text-sm mr-1 sm:mr-2">send</span> Send
           </button>
         )}
       </div>
@@ -205,7 +205,7 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
               onClick={() => !isDisabled && setSelectedTool(tool.id)}
               disabled={isDisabled}
             >
-              <span className="material-icons text-sm mr-2">{tool.icon}</span>
+              <span className="material-icons text-xs sm:text-sm mr-1 sm:mr-2">{tool.icon}</span>
               {tool.label}
             </button>
           </Tooltip>
@@ -216,7 +216,7 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
       {includeSubmitButton && (
         <button
           type="submit"
-          className={`hidden md:flex md:ml-auto items-center justify-center text-sm px-4 py-1 rounded-full border transition-colors shrink-0 ${
+          className={`hidden md:flex md:ml-auto items-center justify-center text-xs sm:text-sm px-4 py-1 rounded-full border transition-colors shrink-0 ${
             isDisabled
               ? 'opacity-70 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-500'
               : 'bg-gray-800 text-white border-gray-900 hover:bg-gray-800 dark:bg-neutral-100 dark:text-gray-900 dark:border-white dark:hover:bg-gray-200'
@@ -231,7 +231,7 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
       {isDropdownOpen && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[99999] bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg shadow-lg overflow-hidden min-w-[200px]"
+          className="fixed z-[99999] bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg shadow-lg overflow-hidden"
           style={{
             top: dropdownDirection === 'down' ? dropdownCoords.top : 'auto',
             bottom: dropdownDirection === 'up' ? window.innerHeight - dropdownCoords.top : 'auto',
@@ -244,14 +244,14 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
               key={tool.id}
               type="button"
               onClick={() => handleToolSelect(tool.id)}
-              className={`w-full flex items-center text-sm px-4 py-2 text-left transition-colors ${
+              className={`w-full flex items-center text-xs sm:text-sm px-4 py-2 text-left transition-colors ${
                 selectedTool === tool.id
                   ? 'bg-zinc-200 dark:bg-zinc-800 text-black dark:text-neutral-200'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800'
               } ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
               disabled={isDisabled}
             >
-              <span className="material-icons text-sm mr-2">{tool.icon}</span>
+              <span className="material-icons text-xs sm:text-sm mr-1 sm:mr-2">{tool.icon}</span>
               {tool.label}
             </button>
           ))}

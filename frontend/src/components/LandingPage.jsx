@@ -123,14 +123,14 @@ const LandingPage = ({
         }}
       />
       {/* first section — stretches on zoom */}
-      <div className="relative z-10 flex w-full flex-1 min-h-0 gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-br-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-b-lg flex items-center justify-between px-5"></div>
-        <div className="flex-1 bg-white dark:bg-black rounded-bl-lg" />
+      <div className="relative z-10 flex w-full flex-1 min-h-[3rem] gap-[1px]">
+        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
+        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
+        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
       </div>
 
       {/* navbar — fixed height, does not stretch */}
-      <div className="relative z-10 flex w-full h-14  flex-nowrap gap-[1px]">
+      <div className="relative z-10 flex w-full h-14 shrink-0 flex-nowrap gap-[1px]">
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5">
           {/* Left — Logo / Brand */}
@@ -233,11 +233,11 @@ const LandingPage = ({
         {/* layer3 */}
         <div className="w-8 sm:w-16 bg-green-500 shrink-0 bg-white dark:bg-black rounded-lg"></div>
 
-        <div className="w-full relative max-w-4xl rounded-lg p-4 sm:p-8 overflow-hidden">
+        <div className="w-full relative max-w-4xl rounded-lg p-6 sm:p-8 overflow-hidden">
           <DottedGrid className="absolute inset-0 z-0 rounded-lg" />
           {/* Greeting */}
-          <div className="relative z-10 text-center mb-6 sm:mb-12">
-            <h1 className="text-2xl sm:text-4xl font-semibold mb-2 text-black dark:text-white">
+          <div className="relative z-10 text-center mb-8 sm:mb-12">
+            <h1 className="text-3xl sm:text-4xl font-semibold mb-2 text-black dark:text-white">
               Welcome to {userName}
             </h1>
             <p className="text-lg text-gray-500 dark:text-neutral-400 ">Get Actionable Answers from the Open Web</p>
@@ -249,7 +249,7 @@ const LandingPage = ({
               <textarea
                 ref={textareaRef}
                 placeholder={placeholderText}
-                className="w-full h-auto bg-transparent text-md text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400  outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px]"
+                className="w-full h-auto bg-transparent text-sm sm:text-md text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400  outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px]"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyPress}
@@ -300,7 +300,7 @@ const LandingPage = ({
       </div>
 
       {/* footer — fixed height, does not stretch */}
-      <div className="relative z-10 flex w-full h-20 sm:h-28 shrink-0 flex-nowrap gap-[1px]">
+      <div className="relative z-10 flex w-full h-28 shrink-0 flex-nowrap gap-[1px]">
         <div className="flex-1  shrink-0 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex flex-col items-center justify-center py-4 gap-1">
           {/* About link */}
@@ -326,7 +326,7 @@ const LandingPage = ({
       </div>
 
       {/* last section — stretches on zoom */}
-      <div className="relative z-10 flex w-full flex-1 min-h-0 gap-[1px]">
+      <div className="relative z-10 flex w-full flex-1 min-h-[3rem] gap-[1px]">
         <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
         <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
