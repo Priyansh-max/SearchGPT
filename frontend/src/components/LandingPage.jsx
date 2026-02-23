@@ -112,7 +112,7 @@ const LandingPage = ({
   };
 
   return (
-    <div className="relative flex-1 flex flex-col items-center min-h-screen bg-gray-200 dark:bg-neutral-800 gap-[1px] overflow-hidden">
+    <div className="relative flex-1 flex flex-col items-center h-screen bg-gray-200 dark:bg-neutral-800 gap-[1px] overflow-hidden">
       {/* Animated glow overlay */}
       <div
         className="absolute left-0 top-0 w-[20%] h-[100%] pointer-events-none z-0 will-change-transform"
@@ -130,7 +130,7 @@ const LandingPage = ({
       </div>
 
       {/* navbar — fixed height, does not stretch */}
-      <div className="relative z-10 flex w-full h-14 shrink-0 gap-[1px]">
+      <div className="relative z-10 flex w-full h-14  flex-nowrap gap-[1px]">
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5">
           {/* Left — Logo / Brand */}
@@ -200,40 +200,44 @@ const LandingPage = ({
             </button>
           </div>
         </div>
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-      </div>
-      <div className="relative z-10 flex w-full h-12 shrink-0 gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-        <div className="w-24 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-16 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg">
-        </div>
-        <div className="w-16 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-24 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        <div className="flex-1  bg-white dark:bg-black rounded-lg" />
       </div>
 
-      <div className="relative z-10 w-full shrink-0 flex items-stretch justify-center text-center gap-[1px]">
-        <div className="flex-1 flex flex-col gap-[1px]">
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-          <div className="h-24 bg-white dark:bg-black rounded-lg">         
-          </div>
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+      {/* middle section */}
+      <div className="relative z-10 flex w-full h-12 shrink-0 flex-nowrap gap-[1px]">
+        <div className="hidden sm:block flex-1 bg-white dark:bg-black rounded-lg shrink-0" />
+        <div className="w-24 hidden sm:block shrink-0 bg-white dark:bg-black rounded-lg" />
+        <div className="w-8 sm:w-16 bg-white shrink-0  dark:bg-black rounded-lg" />
+        <div className="w-full max-w-4xl bg-white dark:bg-black rounded-lg">
         </div>
-        <div className="w-24 shrink-0 flex flex-col gap-[1px]">
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-          <div className="h-24 bg-white dark:bg-black rounded-lg">
-          </div>
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-        </div>
-        <div className="w-16 shrink-0 self-stretch bg-white dark:bg-black rounded-lg">
+        <div className="w-8 sm:w-16 bg-white shrink-0  dark:bg-black rounded-lg" />
+        <div className="w-24 hidden sm:block shrink-0 bg-white dark:bg-black rounded-lg" />
+        <div className="hidden sm:block flex-1 bg-white dark:bg-black rounded-lg shrink-0" />
+      </div>
 
+      {/* content section */}
+      <div className="relative z-10 w-full flex flex-nowrap items-stretch justify-center text-center gap-[1px]">
+        {/* layer1 */}
+        <div className="flex-1 min-w-0 flex flex-col gap-[1px] shrink-0 self-stretch min-h-0">
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
+          <div className="h-24 shrink-0 bg-white dark:bg-black rounded-lg" />
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
         </div>
-        <div className="w-full relative max-w-4xl shrink-0 rounded-lg p-8 overflow-hidden">
+        {/* layer2 */}
+        <div className="hidden sm:flex sm:w-24 shrink-0 self-stretch min-h-0 flex-col gap-[1px]">
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
+          <div className="h-24 shrink-0 bg-white dark:bg-black rounded-lg" />
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
+        </div>
+
+        {/* layer3 */}
+        <div className="w-8 sm:w-16 bg-green-500 shrink-0 bg-white dark:bg-black rounded-lg"></div>
+
+        <div className="w-full relative max-w-4xl rounded-lg p-4 sm:p-8 overflow-hidden">
           <DottedGrid className="absolute inset-0 z-0 rounded-lg" />
           {/* Greeting */}
-          <div className="relative z-10 text-center mb-12">
-            <h1 className="text-4xl font-semibold mb-2 text-black dark:text-white">
+          <div className="relative z-10 text-center mb-6 sm:mb-12">
+            <h1 className="text-2xl sm:text-4xl font-semibold mb-2 text-black dark:text-white">
               Welcome to {userName}
             </h1>
             <p className="text-lg text-gray-500 dark:text-neutral-400 ">Get Actionable Answers from the Open Web</p>
@@ -264,39 +268,40 @@ const LandingPage = ({
             </form>
           </div>
         </div>
-        <div className="w-16 shrink-0 self-stretch bg-white dark:bg-black rounded-lg">
+        {/* layer3 */}
+        <div className="w-8 sm:w-16 bg-green-500 shrink-0 bg-white dark:bg-black rounded-lg">
      
         </div>
-        <div className="w-24 shrink-0 flex flex-col gap-[1px]">
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-          <div className="h-24 bg-white dark:bg-black rounded-lg">
-      
-          </div>
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        {/* layer2 */}
+        <div className="hidden sm:flex sm:w-24 shrink-0 self-stretch min-h-0 flex-col gap-[1px]">
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
+          <div className="h-24 shrink-0 bg-white dark:bg-black rounded-lg" />
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
         </div>
-        <div className="flex-1 flex flex-col gap-[1px]">
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-          <div className="h-24 bg-white dark:bg-black rounded-lg">
-         
-          </div>
-          <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        {/* layer1 */}
+        <div className="hidden sm:flex sm:flex-1 flex flex-col gap-[1px] shrink-0 self-stretch min-h-0">
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
+          <div className="h-24 shrink-0 bg-white dark:bg-black rounded-lg" />
+          <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
         </div>
       </div>
-      <div className="relative z-10 flex w-full h-12 shrink-0 gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
-        <div className="w-24 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-16 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg">
+
+      {/* middle section */}
+      <div className="relative z-10 flex w-full h-12 shrink-0 flex-nowrap gap-[1px]">
+        <div className="flex-1 hidden sm:block bg-white dark:bg-black rounded-lg shrink-0" />
+        <div className="w-24 hidden sm:block shrink-0 bg-white dark:bg-black rounded-lg" />
+        <div className="w-8 sm:w-16 bg-white shrink-0  dark:bg-black rounded-lg" />
+        <div className="w-full max-w-4xl bg-white dark:bg-black rounded-lg">
      
         </div>
-        <div className="w-16 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-24 shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        <div className="w-8 sm:w-16 bg-white shrink-0  dark:bg-black rounded-lg" />
+        <div className="w-24 hidden sm:block shrink-0 bg-white dark:bg-black rounded-lg" />
+        <div className="flex-1 hidden sm:block bg-white dark:bg-black rounded-lg shrink-0" />
       </div>
 
       {/* footer — fixed height, does not stretch */}
-      <div className="relative z-10 flex w-full h-28 shrink-0 gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+      <div className="relative z-10 flex w-full h-20 sm:h-28 shrink-0 flex-nowrap gap-[1px]">
+        <div className="flex-1  shrink-0 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex flex-col items-center justify-center py-4 gap-1">
           {/* About link */}
           <button
@@ -317,7 +322,7 @@ const LandingPage = ({
             &copy; {new Date().getFullYear()} SearchGPT - All rights reserved.
           </p>
         </div>
-        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        <div className="flex-1  shrink-0 bg-white dark:bg-black rounded-lg" />
       </div>
 
       {/* last section — stretches on zoom */}
