@@ -122,9 +122,17 @@ const LandingPage = ({
           filter: 'blur(100px)',
         }}
       />
-      <div className="relative z-10 flex w-full flex-1 gap-[1px]">
+      {/* first section — stretches on zoom */}
+      <div className="relative z-10 flex w-full flex-1 min-h-0 gap-[1px]">
         <div className="flex-1 bg-white dark:bg-black rounded-br-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-b-lg flex items-center justify-between px-5">
+        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-b-lg flex items-center justify-between px-5"></div>
+        <div className="flex-1 bg-white dark:bg-black rounded-bl-lg" />
+      </div>
+
+      {/* navbar — fixed height, does not stretch */}
+      <div className="relative z-10 flex w-full h-14 shrink-0 gap-[1px]">
+        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5">
           {/* Left — Logo / Brand */}
           <div className="flex items-center">
             {/* Icon placeholder — replace with actual logo */}
@@ -192,7 +200,7 @@ const LandingPage = ({
             </button>
           </div>
         </div>
-        <div className="flex-1 bg-white dark:bg-black rounded-bl-lg" />
+        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
       </div>
       <div className="relative z-10 flex w-full h-12 shrink-0 gap-[1px]">
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
@@ -221,7 +229,7 @@ const LandingPage = ({
         <div className="w-16 shrink-0 self-stretch bg-white dark:bg-black rounded-lg">
 
         </div>
-        <div className="w-full relative max-w-4xl shrink-0 bg-white rounded-lg p-8 overflow-hidden">
+        <div className="w-full relative max-w-4xl shrink-0 rounded-lg p-8 overflow-hidden">
           <DottedGrid className="absolute inset-0 z-0 rounded-lg" />
           {/* Greeting */}
           <div className="relative z-10 text-center mb-12">
@@ -285,10 +293,11 @@ const LandingPage = ({
         <div className="w-24 shrink-0 bg-white dark:bg-black rounded-lg" />
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
       </div>
-      {/* Footer row — inside the grid */}
-      <div className="relative z-10 flex w-full flex-1 gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-tr-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex flex-col items-center justify-center py-4 gap-1">
+
+      {/* footer — fixed height, does not stretch */}
+      <div className="relative z-10 flex w-full h-28 shrink-0 gap-[1px]">
+        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex flex-col items-center justify-center py-4 gap-1">
           {/* About link */}
           <button
             type="button"
@@ -308,7 +317,14 @@ const LandingPage = ({
             &copy; {new Date().getFullYear()} SearchGPT - All rights reserved.
           </p>
         </div>
-        <div className="flex-1 bg-white dark:bg-black rounded-tl-lg" />
+        <div className="flex-1 bg-white dark:bg-black rounded-lg" />
+      </div>
+
+      {/* last section — stretches on zoom */}
+      <div className="relative z-10 flex w-full flex-1 min-h-0 gap-[1px]">
+        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
+        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
+        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
       </div>
 
       {/* About Modal */}
