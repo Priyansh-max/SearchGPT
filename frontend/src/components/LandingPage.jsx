@@ -122,8 +122,8 @@ const LandingPage = ({
           filter: 'blur(100px)',
         }}
       />
-      {/* first section — stretches on zoom */}
-      <div className="relative z-10 flex w-full flex-1 min-h-[3rem] gap-[1px]">
+      {/* first section — fixed height */}
+      <div className="relative z-10 flex w-full h-12 shrink-0 gap-[1px]">
         <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-b-lg" />
         <div className="flex-1 sm:w-full sm:flex-none max-w-4xl shrink-0 bg-white dark:bg-black rounded-b-lg flex items-center justify-between px-5"></div>
         <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-b-lg" />
@@ -215,8 +215,8 @@ const LandingPage = ({
         <div className="hidden sm:block flex-1 bg-white dark:bg-black rounded-lg shrink-0" />
       </div>
 
-      {/* content section */}
-      <div className="relative z-10 w-full flex flex-nowrap items-stretch justify-center text-center gap-[1px]">
+      {/* content section — fills rest of height */}
+      <div className="relative z-10 w-full flex-1 min-h-0 flex flex-nowrap items-stretch justify-center text-center gap-[1px]">
         {/* layer1 */}
         <div className="flex-1 min-w-0 flex flex-col gap-[1px] shrink-0 self-stretch min-h-0">
           <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />
@@ -233,7 +233,7 @@ const LandingPage = ({
         {/* layer3 */}
         <div className="w-8 sm:w-16 bg-green-500 shrink-0 bg-white dark:bg-black rounded-lg"></div>
 
-        <div className="w-full relative max-w-4xl rounded-lg p-6 sm:p-8 overflow-hidden">
+        <div className="w-full relative max-w-4xl rounded-lg p-6 sm:p-8 overflow-hidden flex flex-col justify-center min-h-0">
           <DottedGrid className="absolute inset-0 z-0 rounded-lg" />
           {/* Greeting */}
           <div className="relative z-10 text-center mb-8 sm:mb-12">
@@ -325,8 +325,8 @@ const LandingPage = ({
         <div className="flex-1  shrink-0 bg-white dark:bg-black rounded-lg" />
       </div>
 
-      {/* last section — stretches on zoom */}
-      <div className="relative z-10 flex w-full flex-1 min-h-[3rem] gap-[1px]">
+      {/* last section — fixed height */}
+      <div className="relative z-10 flex w-full h-12 shrink-0 gap-[1px]">
         <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-t-lg" />
         <div className="flex-1 sm:w-full sm:flex-none max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
         <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-t-lg" />
