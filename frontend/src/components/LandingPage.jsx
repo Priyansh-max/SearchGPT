@@ -24,14 +24,18 @@ const LandingPage = ({
     return false;
   });
 
-  // Sync dark class on <html> and persist
+  // Sync dark class on <html>, favicon, and persist
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
+      const favicon = document.getElementById('favicon');
+      if (favicon) favicon.href = '/whitelogo.png';
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
+      const favicon = document.getElementById('favicon');
+      if (favicon) favicon.href = '/blacklogo.png';
     }
   }, [isDark]);
 
@@ -112,7 +116,7 @@ const LandingPage = ({
   };
 
   return (
-    <div className="relative flex-1 flex flex-col items-center h-screen bg-gray-200 dark:bg-neutral-800 gap-[1px] overflow-hidden">
+    <div className="relative flex-1 flex flex-col items-center min-h-screen bg-gray-200 dark:bg-neutral-800 gap-[1px] overflow-x-hidden overflow-y-auto">
       {/* Animated glow overlay */}
       <div
         className="absolute left-0 top-0 w-[20%] h-[100%] pointer-events-none z-0 will-change-transform"
@@ -134,12 +138,13 @@ const LandingPage = ({
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5">
           {/* Left — Logo / Brand */}
-          <div className="flex items-center">
-            {/* Icon placeholder — replace with actual logo */}
-            <div className="w-5 h-5 rounded-lg bg-white dark:bg-black flex items-center justify-center ml-2">
-              <span className="material-icons text-black dark:text-white text-[22px] leading-none">search</span>
-            <span className="text-md font-semibold text-gray-800 dark:text-gray-100 tracking-tight">GPT</span>
-            </div>
+          <div className="flex items-center gap-2 ml-2">
+            <img
+              src={isDark ? '/blacklogo.png' : '/whitelogo.png'}
+              alt="SearchGPT"
+              className="w-6 h-6 object-contain"
+            />
+            <span className="text-md font-semibold text-gray-800 dark:text-gray-100 tracking-tight">SearchGPT</span>
           </div>
 
           {/* Spacer */}
@@ -215,8 +220,8 @@ const LandingPage = ({
         <div className="hidden sm:block flex-1 bg-white dark:bg-black rounded-lg shrink-0" />
       </div>
 
-      {/* content section — fills rest of height */}
-      <div className="relative z-10 w-full flex-1 min-h-0 flex flex-nowrap items-stretch justify-center text-center gap-[1px]">
+      {/* content section — fills rest of height, min height so it scrolls in landscape instead of overlapping */}
+      <div className="relative z-10 w-full flex-1 min-h-[min(20rem,60vh)] flex flex-nowrap items-stretch justify-center text-center gap-[1px]">
         {/* layer1 */}
         <div className="flex-1 min-w-0 flex flex-col gap-[1px] shrink-0 self-stretch min-h-0">
           <div className="flex-1 min-h-0 bg-white dark:bg-black rounded-lg" />

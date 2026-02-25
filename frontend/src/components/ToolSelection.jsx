@@ -151,7 +151,7 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
   return (
     <div className="flex flex-wrap gap-2 items-center relative md:flex-nowrap" ref={dropdownRef}>
       {/* Mobile Layout */}
-      <div className="md:hidden flex justify-between items-center w-full gap-2">
+      <div className="lg:hidden flex justify-between items-center w-full gap-2">
         {/* Mobile Dropdown */}
         <div className="relative">
           <button
@@ -192,7 +192,7 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
       </div>
 
       {/* Desktop Buttons */}
-      <div className="hidden md:flex flex-wrap gap-2 items-center">
+      <div className="hidden lg:flex flex-wrap gap-2 items-center">
         {TOOLS.map((tool) => (
           <Tooltip key={tool.id} text={tool.description}>
             <button
@@ -216,7 +216,7 @@ const ToolSelection = ({ selectedTool, setSelectedTool, includeSubmitButton = fa
       {includeSubmitButton && (
         <button
           type="submit"
-          className={`hidden md:flex md:ml-auto items-center justify-center text-xs sm:text-sm px-4 py-1 rounded-full border transition-colors shrink-0 ${
+          className={`hidden lg:flex lg:ml-auto items-center justify-center text-xs sm:text-sm px-4 py-1 rounded-full border transition-colors shrink-0 ${
             isDisabled
               ? 'opacity-70 cursor-not-allowed bg-gray-100 border-gray-300 text-gray-400 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-500'
               : 'bg-gray-800 text-white border-gray-900 hover:bg-gray-800 dark:bg-neutral-100 dark:text-gray-900 dark:border-white dark:hover:bg-gray-200'
