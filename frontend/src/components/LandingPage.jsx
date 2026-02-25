@@ -124,9 +124,9 @@ const LandingPage = ({
       />
       {/* first section — stretches on zoom */}
       <div className="relative z-10 flex w-full flex-1 min-h-[3rem] gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
-        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
+        <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-b-lg" />
+        <div className="flex-1 sm:w-full sm:flex-none max-w-4xl shrink-0 bg-white dark:bg-black rounded-b-lg flex items-center justify-between px-5"></div>
+        <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-b-lg" />
       </div>
 
       {/* navbar — fixed height, does not stretch */}
@@ -136,10 +136,10 @@ const LandingPage = ({
           {/* Left — Logo / Brand */}
           <div className="flex items-center">
             {/* Icon placeholder — replace with actual logo */}
-            <div className="w-5 h-5 rounded-lg bg-white dark:bg-black flex items-center justify-center">
+            <div className="w-5 h-5 rounded-lg bg-white dark:bg-black flex items-center justify-center ml-2">
               <span className="material-icons text-black dark:text-white text-[22px] leading-none">search</span>
-            </div>
             <span className="text-md font-semibold text-gray-800 dark:text-gray-100 tracking-tight">GPT</span>
+            </div>
           </div>
 
           {/* Spacer */}
@@ -148,7 +148,7 @@ const LandingPage = ({
           {/* Right — Social links + theme toggle */}
           <div className="flex items-center gap-5">
             {/* GitHub */}
-            <a
+            {/* <a
               href="https://github.com"
               target="_blank"
               rel="noopener noreferrer"
@@ -158,11 +158,11 @@ const LandingPage = ({
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
               </svg>
-            </a>
+            </a> */}
 
             {/* X (Twitter) */}
             <a
-              href="https://x.com"
+              href="https://x.com/Priyanshh91"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors hover:scale-110"
@@ -175,7 +175,7 @@ const LandingPage = ({
 
             {/* LinkedIn */}
             <a
-              href="https://linkedin.com"
+              href="https://linkedin.com/in/priyanshagarwal01"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors hover:scale-110"
@@ -327,9 +327,9 @@ const LandingPage = ({
 
       {/* last section — stretches on zoom */}
       <div className="relative z-10 flex w-full flex-1 min-h-[3rem] gap-[1px]">
-        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
-        <div className="flex-1 bg-white dark:bg-black rounded-t-lg" />
+        <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-t-lg" />
+        <div className="flex-1 sm:w-full sm:flex-none max-w-4xl shrink-0 bg-white dark:bg-black rounded-t-lg flex items-center justify-between px-5"></div>
+        <div className="w-8 sm:flex-1 bg-white dark:bg-black rounded-t-lg" />
       </div>
 
       {/* About Modal */}
