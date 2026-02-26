@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ToolSelection from './ToolSelection';
-import ToolDescriptionCards from './ToolDescriptionCards';
 import DottedGrid from './UI_components/DottedGrid';
+
 
 const LandingPage = ({ 
   query, 
@@ -12,6 +13,7 @@ const LandingPage = ({
   setSelectedTool, 
   userName 
 }) => {
+  const navigate = useNavigate();
   const textareaRef = useRef(null);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -29,13 +31,9 @@ const LandingPage = ({
     if (isDark) {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      const favicon = document.getElementById('favicon');
-      if (favicon) favicon.href = '/whitelogo.png';
     } else {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
-      const favicon = document.getElementById('favicon');
-      if (favicon) favicon.href = '/blacklogo.png';
     }
   }, [isDark]);
 
@@ -138,14 +136,17 @@ const LandingPage = ({
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5">
           {/* Left — Logo / Brand */}
-          <div className="flex items-center gap-2 ml-2">
-            <img
-              src={isDark ? '/blacklogo.png' : '/whitelogo.png'}
-              alt="SearchGPT"
-              className="w-6 h-6 object-contain"
-            />
-            <span className="text-md font-semibold text-gray-800 dark:text-gray-100 tracking-tight">SearchGPT</span>
-          </div>
+          <button onClick={() => navigate('/')}> 
+            <div className="flex items-center gap-2">
+              <img
+                src={isDark ? '/blacklogo.png' : '/whitelogo.png'}
+                alt="SearchGPT"
+                className="w-6 h-6 object-contain"
+              />
+              <span className="text-md font-semibold text-gray-800 dark:text-gray-100 tracking-tight">SearchGPT</span>
+            </div>
+          </button>
+
 
           {/* Spacer */}
           <div className="flex-1" />
@@ -243,9 +244,9 @@ const LandingPage = ({
           {/* Greeting */}
           <div className="relative z-10 text-center mb-8 sm:mb-12">
             <h1 className="text-3xl sm:text-4xl font-semibold mb-2 text-black dark:text-white">
-              Welcome to {userName}
+              Unlock the Web's Intelligence Instantly
             </h1>
-            <p className="text-lg text-gray-500 dark:text-neutral-400 ">Get Actionable Answers from the Open Web</p>
+            <p className="text-lg text-gray-500 dark:text-neutral-400 ">Transform raw into actionable insights with AI-powered precision</p>
           </div>
           
           {/* Search Input */}
@@ -254,7 +255,7 @@ const LandingPage = ({
               <textarea
                 ref={textareaRef}
                 placeholder={placeholderText}
-                className="w-full h-auto bg-transparent text-sm sm:text-md text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400  outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px]"
+                className="w-full h-auto bg-transparent text-sm sm:text-md text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-neutral-400  outline-none resize-none overflow-hidden min-h-[40px] max-h-[100px] typewriter-char"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyPress}
