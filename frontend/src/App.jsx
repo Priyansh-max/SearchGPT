@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
@@ -14,6 +15,8 @@ import {
 } from './services/api';
 
 function App() {
+  const navigate = useNavigate();
+
   // State management
   const [query, setQuery] = useState('');
   const [selectedTool, setSelectedTool] = useState(null);
@@ -26,11 +29,11 @@ function App() {
   // Mock user name - can be replaced with actual user info from auth system
   const userName = "SearchGPT";
   
-  // Handle initial search from landing page
+  // Handle initial search from landing page — go to playground then send
   const handleSearch = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
-    
+    navigate('/c');
     sendMessage(query);
   };
   
@@ -134,6 +137,16 @@ function App() {
     }
   };
   
+  // Reset chat (new chat) without reloading
+  const handleResetChat = () => {
+    setMessages([]);
+    setQuery('');
+    setIsTyping(false);
+    setIsLoading(false);
+    setLoadingStartTime(null);
+    setLoadingMessage('');
+  };
+
   // Default response when no tool is selected
   const getDefaultResponse = (userText) => {
     if (userText.toLowerCase().includes('search the web')) {
@@ -147,31 +160,41 @@ function App() {
 
   return (
     <div className="min-h-screen">
-      {messages.length === 0 ? (
-        <LandingPage
-          query={query}
-          setQuery={setQuery}
-          handleSearch={handleSearch}
-          handleKeyPress={handleKeyPress}
-          selectedTool={selectedTool}
-          setSelectedTool={setSelectedTool}
-          userName={userName}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              query={query}
+              setQuery={setQuery}
+              handleSearch={handleSearch}
+              handleKeyPress={handleKeyPress}
+              selectedTool={selectedTool}
+              setSelectedTool={setSelectedTool}
+              userName={userName}
+            />
+          }
         />
-      ) : (
-        <ChatInterface
-          messages={messages}
-          isTyping={isTyping}
-          isLoading={isLoading}
-          loadingStartTime={loadingStartTime}
-          loadingMessage={loadingMessage}
-          query={query}
-          setQuery={setQuery}
-          handleSendMessage={handleSendMessage}
-          handleKeyPress={handleKeyPress}
-          selectedTool={selectedTool}
-          setSelectedTool={setSelectedTool}
+        <Route
+          path="/c"
+          element={
+            <ChatInterface
+              messages={messages}
+              isTyping={isTyping}
+              isLoading={isLoading}
+              loadingStartTime={loadingStartTime}
+              loadingMessage={loadingMessage}
+              query={query}
+              setQuery={setQuery}
+              handleSendMessage={handleSendMessage}
+              handleKeyPress={handleKeyPress}
+              selectedTool={selectedTool}
+              setSelectedTool={setSelectedTool}
+              onResetChat={handleResetChat}
+            />
+          }
         />
-      )}
+      </Routes>
     </div>
   );
 }

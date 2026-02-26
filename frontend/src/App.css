@@ -23,3 +23,20 @@
     background-position: 1000px 0;
   }
 }
+
+/* Letter-wise blur for typewriter welcome text */
+@keyframes typewriterCharBlur {
+  from {
+    filter: blur(6px);
+    opacity: 0.6;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+.typewriter-char {
+  display: inline-block;
+  animation: typewriterCharBlur 0.28s ease-out forwards;
+}
