@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ToolSelection from './ToolSelection';
 import DottedGrid from './UI_components/DottedGrid';
+import { FaArrowRightLong } from "react-icons/fa6"
 
 
 const LandingPage = ({ 
@@ -242,11 +243,25 @@ const LandingPage = ({
         <div className="w-full relative max-w-4xl rounded-lg p-6 sm:p-8 overflow-hidden flex flex-col justify-center min-h-0">
           <DottedGrid className="absolute inset-0 z-0 rounded-lg" />
           {/* Greeting */}
-          <div className="relative z-10 text-center mb-8 sm:mb-12">
+          <div className="relative z-10 text-center mb-8 sm:mb-8">
             <h1 className="text-3xl sm:text-4xl font-semibold mb-2 text-black dark:text-white">
               Unlock the Web's Intelligence Instantly
             </h1>
-            <p className="text-lg text-gray-500 dark:text-neutral-400 ">Transform raw into actionable insights with AI-powered precision</p>
+            <p className="text-lg text-gray-500 dark:text-neutral-400">
+              Transform raw into actionable insights with AI-powered precision
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/c')}
+              className="mt-3 relative inline-flex items-center justify-center text-sm font-medium 
+              text-gray-700 hover:text-gray-900 dark:text-gray-100 dark:hover:text-gray-300
+              after:absolute after:left-0 after:-bottom-0.5 after:h-[0.5px] after:w-0
+              after:bg-current after:transition-all after:duration-300
+              hover:after:w-full"
+            >
+              Try now it's free
+              <span className="ml-2 text-xs hover:rotate-[-45deg] transition-transform duration-300"><FaArrowRightLong /></span>
+            </button>
           </div>
           
           {/* Search Input */}
@@ -272,6 +287,21 @@ const LandingPage = ({
                 />
               </div>
             </form>
+          </div>
+          <div className="flex items-center justify-center mt-4">
+            <p className="text-sm relative mt-3 text-gray-500 dark:text-neutral-400">Data API's Coming Soon!</p>
+            <button
+                type="button"
+                onClick={() => navigate('/c')}
+                className="mt-3 ml-2 relative inline-flex items-center justify-center text-sm font-medium text-gray-800 dark:text-gray-100 after:absolute after:left-0 after:-bottom-0.5 after:h-[0.5px] after:w-0
+                after:bg-current after:transition-all after:duration-300
+                hover:after:w-full"
+              >
+                {/* <span className="shine-container">
+                  Join the waitlist
+                </span> */}
+            </button>
+
           </div>
         </div>
         {/* layer3 */}
