@@ -26,6 +26,7 @@ class LLMProcessor:
         self.model = None
         self.model_name = None
         self._provider_chain = None
+        self._embedder = None
         self._safety_settings = {
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
             HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
@@ -82,6 +83,39 @@ class LLMProcessor:
                 openai_api_key=settings.OPENAI_API_KEY or None,
             )
         return self._provider_chain
+
+    def _get_embedder(self):
+        """Lazily build the embedder (falls back to the zero-dep hashing embedder)."""
+        if self._embedder is None:
+            from services.retrieval import get_embedder
+            self._embedder = get_embedder(
+                settings.EMBEDDING_MODE,
+                openai_api_key=settings.OPENAI_API_KEY or None,
+            )
+        return self._embedder
+
+    def _build_context(self, query: str, scraped_results: List[Dict[str, Any]]) -> str:
+        """
+        Select the most query-relevant passages across sources (RAG, Problem 2) instead of
+        blindly truncating each source. Caps sources at MAX_SOURCES, retrieves passages within
+        a token budget that fits the smallest model in the fallback chain.
+        """
+        from services.retrieval import retrieve_relevant_passages
+
+        sources = (scraped_results or [])[: settings.MAX_SOURCES]
+        passages = retrieve_relevant_passages(
+            query,
+            sources,
+            self._get_embedder(),
+            chunk_size=settings.CHUNK_SIZE,
+            overlap=settings.CHUNK_OVERLAP,
+            token_budget=settings.RETRIEVAL_TOKEN_BUDGET,
+        )
+        parts = []
+        for i, p in enumerate(passages):
+            label = p.source_title or p.source_url or f"Source {i + 1}"
+            parts.append(f"Source {i + 1} — {label} ({p.source_url}):\n{p.text}")
+        return "\n\n".join(parts)
     
     async def refine_search_query(self, original_query: str) -> str:
         """
@@ -175,21 +209,10 @@ class LLMProcessor:
             return "No content was found to process."
             
         try:
-            # Prepare content for the LLM prompt
-            # Limit content length to avoid exceeding context window
-            contents_text = ""
-            for i, result in enumerate(scraped_results[:5]):  # Limit to first 5 results
-                contents_text += f"Source {i+1}:\n"
-                contents_text += f"Title: {result.get('title', 'No title')}\n"
-                contents_text += f"URL: {result.get('url', 'No URL')}\n"
-                
-                # Truncate content to reasonable length
-                content = result.get('content', 'No content available')
-                if len(content) > 1500:
-                    content = content[:1500] + "...(truncated)"
-                    
-                contents_text += f"Content: {content}\n\n"
-            
+            # RAG: select the most query-relevant passages across sources instead of
+            # truncating each source to a fixed character budget (Problem 2).
+            contents_text = self._build_context(query, scraped_results)
+
             prompt = f"""
             You are an expert web scrapper agent who helps users find information online and across the web.
             
@@ -243,20 +266,9 @@ class LLMProcessor:
                     "url": result.get("url", ""),
                 })
             
-            # Prepare content for the LLM prompt
-            contents_text = ""
-            for i, result in enumerate(scraped_results[:5]):  # Limit to first 5 results
-                contents_text += f"Source {i+1}:\n"
-                contents_text += f"Title: {result.get('title', 'No title')}\n"
-                contents_text += f"URL: {result.get('url', 'No URL')}\n"
-                
-                # Truncate content to reasonable length
-                content = result.get('content', 'No content available')
-                if len(content) > 1200:
-                    content = content[:1200] + "...(truncated)"
-                    
-                contents_text += f"Content: {content}\n\n"
-            
+            # RAG: relevant-passage selection instead of fixed truncation (Problem 2).
+            contents_text = self._build_context(query, scraped_results)
+
             prompt = f"""
             You are an expert content analyser who helps synthesize data from multiple sources combine them and create a comprehensive analysis.
             
@@ -278,9 +290,9 @@ class LLMProcessor:
             
             Only return the JSON object, nothing else. Make sure your JSON is valid with proper quotes and formatting.
             """
-            
-            response = await self._generate_content(prompt)
-            
+
+            response = await self._generate_content(prompt, json_mode=True)
+
             try:
                 # Parse JSON response
                 # Clean the response to handle common formatting issues

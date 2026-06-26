@@ -1,9 +1,10 @@
 import logging
 import asyncio
 from typing import List, Dict, Any, Optional
-from serpapi import GoogleSearch
 import time
 from config import settings
+# NOTE: `from serpapi import GoogleSearch` is imported lazily inside the search methods so
+# this module (and the whole API) imports even when the package/key isn't present.
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,12 @@ class SerpApiSearcher:
         self.engine = settings.SERPAPI_ENGINE
         self.timeout = settings.SERPAPI_TIMEOUT
         
+        # Lazy/graceful: do NOT raise at import — the engine and tests must load without a
+        # SERPAPI_KEY. Searches return [] (and log) if the key is missing at call time.
         if not self.api_key:
-            logger.warning("SERPAPI_KEY not found in environment variables")
-            raise ValueError("SERPAPI_KEY is required for SerpAPI integration")
-        
-        logger.info(f"SerpAPI searcher initialized with engine: {self.engine}")
+            logger.warning("SERPAPI_KEY not set — search will return no results until configured")
+        else:
+            logger.info(f"SerpAPI searcher initialized with engine: {self.engine}")
     
     async def search_google(self, query: str, num_results: int = None) -> List[Dict[str, Any]]:
         """
@@ -30,8 +32,12 @@ class SerpApiSearcher:
         if not query:
             return []
         
+        if not self.api_key:
+            logger.error("SERPAPI_KEY not configured — cannot search")
+            return []
+
         num_results = num_results or settings.SEARCH_RESULTS_LIMIT
-        
+
         try:
             logger.info(f"Searching Google for: {query}")
             
@@ -47,9 +53,10 @@ class SerpApiSearcher:
             }
             
             # Execute search
+            from serpapi import GoogleSearch  # lazy import
             search = GoogleSearch(search_params)
             results = search.get_dict()
-            
+
             # Parse results
             parsed_results = self._parse_google_results(results)
             
@@ -83,9 +90,10 @@ class SerpApiSearcher:
             }
             
             # Execute search
+            from serpapi import GoogleSearch  # lazy import
             search = GoogleSearch(search_params)
             results = search.get_dict()
-            
+
             # Parse results
             parsed_results = self._parse_bing_results(results)
             
