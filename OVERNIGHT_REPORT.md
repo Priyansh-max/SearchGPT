@@ -20,8 +20,14 @@ Branch: **`wrapup-overnight`** (NOT pushed — review locally). Plan: `wrapup.md
 | 3 | LLM fallback chain Gemini→OpenAI (`services/llm_provider.py`) | 9 unit tests pass |
 | — | Config layering + complete `.env.example` (self-host vs hosted) | imports clean |
 | 1 | Result cache `TTLCache` + key normalization (`services/cache.py`) | 7 unit tests pass |
+| 3/1 | `LLMProcessor` lazy init + routed through fallback chain; async; out-tokens 8192 | 2 import tests; imports keyless |
 
-Backend tests: **40 passing** (`cd backend && python -m pytest tests/ -q`).
+Backend tests: **42 passing** (`cd backend && python -m pytest tests/ -q`).
+
+> **Note:** a real `GEMINI_API_KEY` is present in `backend/.env`. I did **not** use it for any
+> generation calls (credit care + you said keys come in the morning). One cheap `list_models`
+> metadata call happened once during a test, now eliminated. Tell me if you want overnight live
+> testing enabled with that key.
 
 ---
 
@@ -33,8 +39,8 @@ folder** to be safe. Never commit private keys.
 ---
 
 ## ⏳ In progress / remaining (this loop continues overnight)
-- [ ] Wire `retrieval` + `llm_provider` into `llm_processor` (needs lazy-init refactor first so
-      the module imports without a GEMINI key — currently it fails at import without one)
+- [x] Lazy-init `llm_processor` + route LLM calls through fallback chain (async, 8192 tokens) — done
+- [ ] Wire `retrieval` into the synthesize/scrape paths (replace char-truncation with passages)
 - [x] Caching layer (skip scrape+LLM on repeat queries) — done, 7 tests
 - [ ] Playwright per-request context + semaphore lanes + memory guard (Problem 1)
 - [ ] Single `POST /api/v1/query` endpoint + envelope + `X-API-Key` middleware (Problem 4)
