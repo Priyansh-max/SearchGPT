@@ -1,9 +1,14 @@
 import React, { useRef, useEffect } from 'react';
 import ToolSelection from './ToolSelection';
 
+// Detect http(s) links in the input (Problem 6) — when present we read those pages
+// directly instead of running a web search.
+const URL_RE = /https?:\/\/[^\s]+/gi;
+
 const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, selectedTool, setSelectedTool, isDisabled = false }) => {
   const textareaRef = useRef(null);
-  
+  const detectedUrls = (query.match(URL_RE) || []).slice(0, 5);
+
   // Auto-resize textarea as content changes
   useEffect(() => {
     if (textareaRef.current) {
@@ -32,7 +37,22 @@ const MessageInput = ({ query, setQuery, handleSendMessage, handleKeyPress, sele
               disabled={isDisabled}
             />
 
-                
+            {/* Link-mode chips — shown when the query contains URLs (Problem 6) */}
+            {detectedUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {detectedUrls.map((u, i) => (
+                  <span
+                    key={i}
+                    title={u}
+                    className="inline-flex items-center gap-1 max-w-[260px] truncate text-xs px-2 py-1 rounded-full border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300"
+                  >
+                    <span className="material-icons text-[14px] leading-none select-none">link</span>
+                    Reading this link
+                  </span>
+                ))}
+              </div>
+            )}
+
                 {/* Tool Selection with Send button inline */}
             <div className="border-t border-gray-200 dark:border-neutral-800 pt-4">
               <ToolSelection 

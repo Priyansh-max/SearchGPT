@@ -3,6 +3,8 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
+import AdminDashboard from './components/AdminDashboard';
+import ApiKeys from './components/ApiKeys';
 import { 
   performWebSearch, 
   scrapeWebContent, 
@@ -194,6 +196,8 @@ function App() {
             />
           }
         />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/keys" element={<ApiKeys />} />
       </Routes>
     </div>
   );
