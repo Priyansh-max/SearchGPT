@@ -19,8 +19,9 @@ Branch: **`wrapup-overnight`** (NOT pushed — review locally). Plan: `wrapup.md
 | 2 | RAG core: chunking + cosine retrieval, pluggable embedders (`services/retrieval.py`) | 8 unit tests pass |
 | 3 | LLM fallback chain Gemini→OpenAI (`services/llm_provider.py`) | 9 unit tests pass |
 | — | Config layering + complete `.env.example` (self-host vs hosted) | imports clean |
+| 1 | Result cache `TTLCache` + key normalization (`services/cache.py`) | 7 unit tests pass |
 
-Backend tests: **33 passing** (`cd backend && python -m pytest tests/ -q`).
+Backend tests: **40 passing** (`cd backend && python -m pytest tests/ -q`).
 
 ---
 
@@ -32,8 +33,9 @@ folder** to be safe. Never commit private keys.
 ---
 
 ## ⏳ In progress / remaining (this loop continues overnight)
-- [ ] Wire `retrieval` + `llm_provider` into `llm_processor` (refactor LLM methods)
-- [ ] Caching layer (skip scrape+LLM on repeat queries)
+- [ ] Wire `retrieval` + `llm_provider` into `llm_processor` (needs lazy-init refactor first so
+      the module imports without a GEMINI key — currently it fails at import without one)
+- [x] Caching layer (skip scrape+LLM on repeat queries) — done, 7 tests
 - [ ] Playwright per-request context + semaphore lanes + memory guard (Problem 1)
 - [ ] Single `POST /api/v1/query` endpoint + envelope + `X-API-Key` middleware (Problem 4)
 - [ ] Link-mode integration into the request path (Problem 6)
