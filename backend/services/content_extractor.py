@@ -101,23 +101,12 @@ class ContentExtractor:
                 
             except Exception as e:
                 logger.info(f"Newspaper3k extraction failed: {str(e)}, trying Playwright")
-                
-                # Navigate to URL with Playwright
-                success = await self.browser.navigate(url)
-                if not success:
-                    raise Exception(f"Failed to navigate to {url}")
-                    
-                # Wait for page to load
-                await asyncio.sleep(2)
-                
-                # Scroll to load all content
-                try:
-                    await self.browser.scroll_to_bottom(scroll_pause_time=0.5)
-                except Exception as e:
-                    logger.warning(f"Error while scrolling, continuing anyway: {str(e)}")
-                
-                # Get page source
-                html = await self.browser.get_page_source()
+
+                # Per-request ISOLATED context (Problem 1 fix for the shared-page race);
+                # heavy resources blocked for memory/speed.
+                html, final_url = await self.browser.scrape_isolated(
+                    url, block_resources=settings.BLOCK_RESOURCES
+                )
                 if not html:
                     raise Exception("Failed to get page source")
                     
@@ -168,7 +157,7 @@ class ContentExtractor:
                 
                 metadata = {
                     "extraction_method": "playwright",
-                    "url": await self.browser.get_current_url(),  # In case of redirects
+                    "url": final_url,  # In case of redirects
                 }
             
             # Create result
