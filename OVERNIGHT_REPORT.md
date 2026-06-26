@@ -21,8 +21,9 @@ Branch: **`wrapup-overnight`** (NOT pushed — review locally). Plan: `wrapup.md
 | — | Config layering + complete `.env.example` (self-host vs hosted) | imports clean |
 | 1 | Result cache `TTLCache` + key normalization (`services/cache.py`) | 7 unit tests pass |
 | 3/1 | `LLMProcessor` lazy init + routed through fallback chain; async; out-tokens 8192 | 2 import tests; imports keyless |
+| 2/1 | RAG wired into synthesize/scrape paths (no more char-truncation); search import-safe | 3 tests; `api.routes` imports keyless |
 
-Backend tests: **42 passing** (`cd backend && python -m pytest tests/ -q`).
+Backend tests: **45 passing** (`cd backend && python -m pytest tests/ -q`). `api.routes` imports without keys.
 
 > **Note:** a real `GEMINI_API_KEY` is present in `backend/.env`. I did **not** use it for any
 > generation calls (credit care + you said keys come in the morning). One cheap `list_models`
@@ -40,7 +41,8 @@ folder** to be safe. Never commit private keys.
 
 ## ⏳ In progress / remaining (this loop continues overnight)
 - [x] Lazy-init `llm_processor` + route LLM calls through fallback chain (async, 8192 tokens) — done
-- [ ] Wire `retrieval` into the synthesize/scrape paths (replace char-truncation with passages)
+- [x] Wire `retrieval` into the synthesize/scrape paths (replace char-truncation with passages) — done
+- [x] Make search service import-safe (lazy serpapi) — `api.routes` imports keyless — done
 - [x] Caching layer (skip scrape+LLM on repeat queries) — done, 7 tests
 - [ ] Playwright per-request context + semaphore lanes + memory guard (Problem 1)
 - [ ] Single `POST /api/v1/query` endpoint + envelope + `X-API-Key` middleware (Problem 4)
