@@ -25,8 +25,9 @@ Branch: **`wrapup-overnight`** (NOT pushed — review locally). Plan: `wrapup.md
 | 4/6 | Single `POST /api/v1/query` (modes, envelope, X-API-Key, cache, link-mode acquisition) | 8 TestClient tests; full `app` imports |
 | 1 | Per-request browser context (kills shared-page race) + resource blocking; ConcurrencyManager lanes + memory guard | 7 tests; imports clean. Chromium path = NEEDS LIVE |
 | 5 | Analytics events recorder + aggregates (hashed IP); server-side-gated `/api/admin/*` dashboard API | 7 tests; admin routes registered |
+| 6/5/4 | Frontend: link chip (MessageInput), `/admin` Recharts dashboard, `/keys` onboarding page | `vite build` passes |
 
-Backend tests: **67 passing** (`cd backend && python -m pytest tests/ -q`). Full `app` imports keyless; `/api/v1/query` + `/api/admin/*` registered.
+Backend tests: **67 passing** (`cd backend && python -m pytest tests/ -q`). Full `app` imports keyless. Frontend `vite build` passes.
 
 > **Note:** a real `GEMINI_API_KEY` is present in `backend/.env`. I did **not** use it for any
 > generation calls (credit care + you said keys come in the morning). One cheap `list_models`
@@ -52,9 +53,10 @@ folder** to be safe. Never commit private keys.
 - [x] Playwright per-request context + tier lanes + memory guard (Problem 1) — done (Chromium = NEEDS LIVE)
 - [ ] Thread request tier (signedin/demo) from API into scrape slot (small wire-up remaining)
 - [x] Analytics `events` + admin endpoints (Problem 5, behind `ANALYTICS_ENABLED`) — done, 7 tests
-- [ ] Frontend: link chip, admin dashboard (Recharts), key/onboarding page, design polish
+- [x] Frontend: link chip, admin dashboard (Recharts), key/onboarding page — done (`vite build` passes)
 - [ ] Competitive research doc (vs Tavily/Exa/Perplexity/Firecrawl)
-- [ ] Final morning test script (`verify.sh` / `verify.md`) for the key-dependent paths
+- [ ] Final morning test script (`verify.md`) for the key-dependent paths
+- [ ] (optional) localhost Playwright screenshots of /admin and /keys
 
 ---
 
