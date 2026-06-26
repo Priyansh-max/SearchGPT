@@ -51,7 +51,7 @@ async def generate_with_fallback(
     providers: Sequence[LLMProvider],
     *,
     json_mode: bool = False,
-    max_output_tokens: int = 8192,
+    max_output_tokens: Optional[int] = None,
 ) -> GenResult:
     """Try each provider in order; return the first non-empty answer. Raise if all fail."""
     if not providers:
@@ -85,12 +85,17 @@ class GeminiProvider:
         self.model = model
 
     async def generate(self, prompt: str, *, json_mode: bool = False,
-                       max_output_tokens: int = 8192) -> str:
+                       max_output_tokens: Optional[int] = None) -> str:
         try:
-            cfg = {"max_output_tokens": max_output_tokens}
+            # Only override per-call when needed; otherwise use the model's baked-in
+            # generation_config (temperature/top_p/top_k/max_output_tokens).
+            cfg = {}
+            if max_output_tokens is not None:
+                cfg["max_output_tokens"] = max_output_tokens
             if json_mode:
                 cfg["response_mime_type"] = "application/json"
-            resp = await self.model.generate_content_async(prompt, generation_config=cfg)
+            kwargs = {"generation_config": cfg} if cfg else {}
+            resp = await self.model.generate_content_async(prompt, **kwargs)
             return getattr(resp, "text", "") or ""
         except Exception as e:
             raise ProviderError(str(e), rate_limited=_looks_rate_limited(e), provider=self.name)
@@ -111,13 +116,13 @@ class OpenAIProvider:
         return self._client
 
     async def generate(self, prompt: str, *, json_mode: bool = False,
-                       max_output_tokens: int = 8192) -> str:
+                       max_output_tokens: Optional[int] = None) -> str:
         try:
             client = self._ensure()
             kwargs = {
                 "model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": max_output_tokens,
+                "max_tokens": max_output_tokens or 8192,
             }
             if json_mode:
                 kwargs["response_format"] = {"type": "json_object"}

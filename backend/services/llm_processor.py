@@ -6,6 +6,9 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from dotenv import load_dotenv
 
+from config import settings
+from services.llm_provider import build_provider_chain, generate_with_fallback
+
 # Load environment variables
 load_dotenv()
 
@@ -17,57 +20,68 @@ class LLMProcessor:
     """
     
     def __init__(self):
-        """Initialize the LLM processor with API key from environment variables"""
-        try:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                logger.warning("GEMINI_API_KEY not found in environment variables")
-                raise ValueError("GEMINI_API_KEY is required")
-                
-            # Configure the Gemini API
-            genai.configure(api_key=api_key)
-            
-            # Get available models
-            self.available_models = [m.name for m in genai.list_models() 
-                                    if 'generateContent' in m.supported_generation_methods]
-            
-            # Select the appropriate model (preferring Gemini Flash if available)
-            if 'models/gemini-2.0-flash' in self.available_models:
-                self.model_name = 'models/gemini-2.0-flash'
-            elif 'models/gemini-1.5-flash' in self.available_models:
-                self.model_name = 'models/gemini-1.5-flash'
-            elif 'models/gemini-1.0-pro' in self.available_models:
-                self.model_name = 'models/gemini-1.0-pro'
-            else:
-                self.model_name = self.available_models[0] if self.available_models else None
-                
-            if not self.model_name:
-                raise ValueError("No suitable Gemini models available")
-                
-            logger.info(f"Using LLM model: {self.model_name}")
-            
-            # Configure model with safe settings
-            self.model = genai.GenerativeModel(
-                model_name=self.model_name,
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                },
-                generation_config={
-                    "temperature": 0.2,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 2048,
-                }
+        """Store config only — no network/keys touched here. The Gemini model and the
+        provider fallback chain are built lazily on first use so this module imports
+        cleanly without a GEMINI_API_KEY (needed for offline tests and self-host setup)."""
+        self.model = None
+        self.model_name = None
+        self._provider_chain = None
+        self._safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        }
+        # max_output_tokens raised 2048 -> settings.MAX_OUTPUT_TOKENS (8192) per Problem 2.
+        self._generation_config = {
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": settings.MAX_OUTPUT_TOKENS,
+        }
+
+    def _ensure_model(self):
+        """Lazily configure Gemini and build the model on first use. NEEDS KEYS at runtime."""
+        if self.model is not None:
+            return self.model
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is required")
+
+        genai.configure(api_key=api_key)
+        available = [m.name for m in genai.list_models()
+                     if 'generateContent' in m.supported_generation_methods]
+
+        if 'models/gemini-2.0-flash' in available:
+            self.model_name = 'models/gemini-2.0-flash'
+        elif 'models/gemini-1.5-flash' in available:
+            self.model_name = 'models/gemini-1.5-flash'
+        elif 'models/gemini-1.0-pro' in available:
+            self.model_name = 'models/gemini-1.0-pro'
+        else:
+            self.model_name = available[0] if available else None
+
+        if not self.model_name:
+            raise ValueError("No suitable Gemini models available")
+
+        logger.info(f"Using LLM model: {self.model_name}")
+        self.model = genai.GenerativeModel(
+            model_name=self.model_name,
+            safety_settings=self._safety_settings,
+            generation_config=self._generation_config,
+        )
+        return self.model
+
+    def _ensure_providers(self):
+        """Build the Gemini -> OpenAI fallback chain on first use (OpenAI only if a key is set)."""
+        if self._provider_chain is None:
+            self._provider_chain = build_provider_chain(
+                gemini_model=self._ensure_model(),
+                openai_model=settings.OPENAI_MODEL,
+                openai_api_key=settings.OPENAI_API_KEY or None,
             )
-            
-            logger.info("LLM processor initialized successfully")
-            
-        except Exception as e:
-            logger.error(f"Error initializing LLM processor: {str(e)}")
-            raise
+        return self._provider_chain
     
     async def refine_search_query(self, original_query: str) -> str:
         """
@@ -400,13 +414,16 @@ class LLMProcessor:
             # Fallback to basic formatting
             return self._format_basic_news(query, news_results)
     
-    async def _generate_content(self, prompt: str) -> str:
+    async def _generate_content(self, prompt: str, *, json_mode: bool = False) -> str:
         """
-        Helper method to generate content using the Gemini API
+        Generate content through the provider fallback chain (Gemini async -> OpenAI).
+        Fixes the old blocking synchronous call and adds rate-limit fallback.
         """
         try:
-            response = self.model.generate_content(prompt)
-            return response.text
+            providers = self._ensure_providers()
+            result = await generate_with_fallback(prompt, providers, json_mode=json_mode)
+            logger.info(f"LLM answered via: {result.provider}")
+            return result.text
         except Exception as e:
             logger.error(f"Error generating content from LLM: {str(e)}")
             raise
