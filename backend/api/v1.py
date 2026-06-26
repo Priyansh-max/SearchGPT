@@ -15,13 +15,15 @@ Link mode: if the query contains URLs (or options.urls is set), those URLs are s
 directly (SSRF-checked) instead of running a web search.
 """
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from config import settings
 from services.cache import get_cache, make_cache_key
+from services.analytics import get_recorder, Event, hash_ip
 from utils.url_utils import extract_urls, is_safe_url
 
 # Service singletons (all import keyless after the lazy-init work)
@@ -133,12 +135,14 @@ async def run_query(mode: str, query: str, options: QueryOptions, synthesize: bo
 
 
 @router.post("/query")
-async def query_endpoint(req: QueryRequest, identity: str = Depends(verify_api_key)):
+async def query_endpoint(req: QueryRequest, request: Request,
+                         identity: str = Depends(verify_api_key)):
     if req.mode not in VALID_MODES:
         raise HTTPException(status_code=400, detail=f"invalid mode '{req.mode}' (use {sorted(VALID_MODES)})")
     if not req.query and not (req.options.urls):
         raise HTTPException(status_code=400, detail="query is required")
 
+    started = time.time()
     synthesize = req.options.synthesize or req.mode == "analyze"
     key = make_cache_key(req.mode, req.query, {
         "synthesize": synthesize,
@@ -147,13 +151,42 @@ async def query_endpoint(req: QueryRequest, identity: str = Depends(verify_api_k
     })
     cache = get_cache()
 
+    out = None
     if settings.CACHE_ENABLED:
         hit = cache.get(key)
         if hit is not None:
             out = {**hit, "meta": {**hit.get("meta", {}), "cached": True}}
-            return out
 
-    result = await run_query(req.mode, req.query, req.options, synthesize)
-    if settings.CACHE_ENABLED:
-        cache.set(key, result)
-    return result
+    if out is None:
+        out = await run_query(req.mode, req.query, req.options, synthesize)
+        if settings.CACHE_ENABLED:
+            cache.set(key, out)
+
+    _record_event(request, identity, req, out, started)
+    return out
+
+
+def _record_event(request, identity, req, out, started) -> None:
+    """Lightweight analytics record (no-op unless ANALYTICS_ENABLED). Never fails the request."""
+    recorder = get_recorder()
+    if not recorder.enabled:
+        return
+    try:
+        meta = out.get("meta", {})
+        ip = request.client.host if request.client else ""
+        recorder.record(Event(
+            created_at=time.time(),
+            identity_type="api_key" if identity not in ("anonymous",) else "anonymous",
+            identity_id=identity,
+            ip_hash=hash_ip(ip),
+            event_type="query",
+            mode=req.mode,
+            query_text=req.query,
+            synthesize=bool(meta.get("synthesized")),
+            cached=bool(meta.get("cached")),
+            provider=meta.get("provider"),
+            status="success",
+            latency_ms=int((time.time() - started) * 1000),
+        ))
+    except Exception as e:  # analytics must never break the API
+        logger.warning(f"analytics record failed: {e}")
