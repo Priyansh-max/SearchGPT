@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 # Import our custom modules
 from api.routes import router as api_router
+from api.v1 import router as v1_router
 from config import settings
 
 # Load environment variables
@@ -43,6 +44,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(api_router)
+app.include_router(v1_router)  # Public Data API v1 (Problem 4)
 
 # Root endpoint
 @app.get("/")
