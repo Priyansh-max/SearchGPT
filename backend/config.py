@@ -66,5 +66,41 @@ class Settings(BaseModel):
     MAX_RETRIES: int = int(os.getenv("MAX_RETRIES", "3"))
     RETRY_DELAY: float = float(os.getenv("RETRY_DELAY", "1.0"))  # seconds
 
+    # ---------------- Wrap-up additions (Problems 1-6) ----------------
+
+    # LLM fallback (Problem 3) — OpenAI is optional; unset = Gemini-only
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    LLM_PRIMARY: str = os.getenv("LLM_PRIMARY", "gemini")
+    MAX_OUTPUT_TOKENS: int = int(os.getenv("MAX_OUTPUT_TOKENS", "8192"))
+
+    # Retrieval / RAG (Problem 2)
+    MAX_SOURCES: int = int(os.getenv("MAX_SOURCES", "10"))
+    EMBEDDING_MODE: str = os.getenv("EMBEDDING_MODE", "local")  # local | openai | hashing
+    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "800"))
+    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "100"))
+    RETRIEVAL_TOKEN_BUDGET: int = int(os.getenv("RETRIEVAL_TOKEN_BUDGET", "90000"))
+
+    # Concurrency lanes + memory guard (Problem 1)
+    SIGNEDIN_SLOTS: int = int(os.getenv("SIGNEDIN_SLOTS", "2"))
+    DEMO_SLOTS: int = int(os.getenv("DEMO_SLOTS", "1"))
+    MEMORY_GUARD_MB: int = int(os.getenv("MEMORY_GUARD_MB", "120"))
+    BLOCK_RESOURCES: bool = os.getenv("BLOCK_RESOURCES", "True").lower() in ["true", "1", "t"]
+
+    # Auth / hosted add-ons (toggles — OFF-friendly defaults keep self-host simple)
+    AUTH_MODE: str = os.getenv("AUTH_MODE", "static")  # supabase | static | off
+    API_KEY: str = os.getenv("API_KEY", "")  # static self-host key (AUTH_MODE=static)
+    QUOTA_ENABLED: bool = os.getenv("QUOTA_ENABLED", "False").lower() in ["true", "1", "t"]
+    ANALYTICS_ENABLED: bool = os.getenv("ANALYTICS_ENABLED", "False").lower() in ["true", "1", "t"]
+
+    # Supabase (hosted only — analytics, multi-user keys)
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+
+    # Admin dashboard (Problem 5) — gate enforced server-side
+    ADMIN_USER: str = os.getenv("ADMIN_USER", "")
+    ADMIN_PASSWORD_HASH: str = os.getenv("ADMIN_PASSWORD_HASH", "")  # bcrypt hash, never plaintext
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "")
+
 # Create settings instance
 settings = Settings() 
