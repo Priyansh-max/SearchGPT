@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from api.routes import router as api_router
 from api.v1 import router as v1_router
 from api.admin import router as admin_router
+from api.keys import router as keys_router
 from config import settings
 
 # Load environment variables
@@ -47,6 +48,7 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(v1_router)     # Public Data API v1 (Problem 4)
 app.include_router(admin_router)  # Admin analytics dashboard API (Problem 5)
+app.include_router(keys_router)   # API key management (Developers)
 
 # Root endpoint
 @app.get("/")

@@ -52,7 +52,10 @@ class QueryRequest(BaseModel):
 
 
 async def verify_api_key(x_api_key: Optional[str] = Header(default=None)) -> str:
-    """X-API-Key gate honoring AUTH_MODE: off | static | supabase."""
+    """X-API-Key gate honoring AUTH_MODE: off | static | keystore | supabase.
+
+    Returns an identity string (key id, 'static', or 'anonymous') used for analytics.
+    """
     mode = (settings.AUTH_MODE or "static").lower()
     if mode == "off":
         return "anonymous"
@@ -62,6 +65,16 @@ async def verify_api_key(x_api_key: Optional[str] = Header(default=None)) -> str
         if x_api_key != settings.API_KEY:
             raise HTTPException(status_code=401, detail="Invalid or missing API key")
         return "static"
+    if mode == "keystore":
+        from services.keystore import get_keystore
+        store = get_keystore()
+        rec = store.validate(x_api_key or "")
+        if not rec:
+            raise HTTPException(status_code=401, detail="Invalid or missing API key")
+        if store.over_quota(rec):
+            raise HTTPException(status_code=429, detail="quota exceeded for this key")
+        store.record_use(rec)
+        return rec.id  # per-key identity for analytics
     if mode == "supabase":
         # NEEDS KEYS: validate against the Supabase api_keys table + quota.
         raise HTTPException(status_code=501, detail="Supabase auth not configured")

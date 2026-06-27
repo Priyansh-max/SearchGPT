@@ -33,3 +33,5 @@ Thumbs.db
 # --- Scratch / local ---
 *.log
 debug/
+data/
+keystore.json

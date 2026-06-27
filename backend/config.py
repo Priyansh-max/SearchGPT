@@ -88,8 +88,12 @@ class Settings(BaseModel):
     BLOCK_RESOURCES: bool = os.getenv("BLOCK_RESOURCES", "True").lower() in ["true", "1", "t"]
 
     # Auth / hosted add-ons (toggles — OFF-friendly defaults keep self-host simple)
-    AUTH_MODE: str = os.getenv("AUTH_MODE", "static")  # supabase | static | off
+    AUTH_MODE: str = os.getenv("AUTH_MODE", "static")  # supabase | keystore | static | off
     API_KEY: str = os.getenv("API_KEY", "")  # static self-host key (AUTH_MODE=static)
+
+    # Key store (AUTH_MODE=keystore) — managed multi-key + usage/quota
+    KEYSTORE_PATH: str = os.getenv("KEYSTORE_PATH", "data/keystore.json")
+    DEFAULT_KEY_QUOTA: int = int(os.getenv("DEFAULT_KEY_QUOTA", "0"))  # 0 = unlimited
     QUOTA_ENABLED: bool = os.getenv("QUOTA_ENABLED", "False").lower() in ["true", "1", "t"]
     ANALYTICS_ENABLED: bool = os.getenv("ANALYTICS_ENABLED", "False").lower() in ["true", "1", "t"]
 
