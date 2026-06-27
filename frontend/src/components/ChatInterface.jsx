@@ -74,15 +74,25 @@ const ChatInterface = ({
             <h1 className="text-base text-center font-medium text-black dark:text-white">SearchGPT Agent <span className="text-xs text-gray-500 dark:text-neutral-400">Playground</span></h1>
           </div>
 
-          {/* Right: theme toggle */}
-          <button
-            type="button"
-            onClick={() => setIsDark(!isDark)}
-            className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
-            title={isDark ? 'Light mode' : 'Dark mode'}
-          >
-            <span className="material-icons text-[20px] leading-none select-none">{isDark ? 'light_mode' : 'dark_mode'}</span>
-          </button>
+          {/* Right: Developers link + theme toggle */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => navigate('/developers')}
+              className="hidden sm:inline-flex items-center h-9 px-3 rounded-lg text-sm text-gray-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+              title="API & keys"
+            >
+              Developers
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDark(!isDark)}
+              className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-gray-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+              title={isDark ? 'Light mode' : 'Dark mode'}
+            >
+              <span className="material-icons text-[20px] leading-none select-none">{isDark ? 'light_mode' : 'dark_mode'}</span>
+            </button>
+          </div>
         </div>
       </header>
       

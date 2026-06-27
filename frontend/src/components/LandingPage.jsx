@@ -193,6 +193,16 @@ const LandingPage = ({
               </svg>
             </a>
 
+            {/* Developers */}
+            <button
+              type="button"
+              onClick={() => navigate('/developers')}
+              className="text-sm font-medium text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors"
+              title="API & keys"
+            >
+              Developers
+            </button>
+
             {/* Divider */}
             <div className="w-px h-6 bg-gray-800 dark:bg-neutral-200" />
 
@@ -289,17 +299,15 @@ const LandingPage = ({
             </form>
           </div>
           <div className="flex items-center justify-center mt-4">
-            <p className="text-sm relative mt-3 text-gray-500 dark:text-neutral-400">Data API's Coming Soon!</p>
+            <p className="text-sm relative mt-3 text-gray-500 dark:text-neutral-400">Data API is live —</p>
             <button
                 type="button"
-                onClick={() => navigate('/c')}
+                onClick={() => navigate('/developers')}
                 className="mt-3 ml-2 relative inline-flex items-center justify-center text-sm font-medium text-gray-800 dark:text-gray-100 after:absolute after:left-0 after:-bottom-0.5 after:h-[0.5px] after:w-0
                 after:bg-current after:transition-all after:duration-300
                 hover:after:w-full"
               >
-                {/* <span className="shine-container">
-                  Join the waitlist
-                </span> */}
+                get your API key
             </button>
 
           </div>

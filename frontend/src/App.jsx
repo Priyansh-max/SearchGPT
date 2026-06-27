@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
 import AdminDashboard from './components/AdminDashboard';
-import ApiKeys from './components/ApiKeys';
+import Developers from './components/Developers';
 import { 
   performWebSearch, 
   scrapeWebContent, 
@@ -197,7 +197,8 @@ function App() {
           }
         />
         <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/keys" element={<ApiKeys />} />
+        <Route path="/developers" element={<Developers />} />
+        <Route path="/keys" element={<Navigate to="/developers" replace />} />
       </Routes>
     </div>
   );
