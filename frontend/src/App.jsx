@@ -7,6 +7,7 @@ import AdminDashboard from './components/AdminDashboard';
 import Developers from './components/Developers';
 import SignIn from './components/SignIn';
 import AuthCallback from './components/AuthCallback';
+import FontPreview from './components/FontPreview';
 import { 
   performWebSearch, 
   scrapeWebContent, 
@@ -202,6 +203,7 @@ function App() {
         <Route path="/developers" element={<Developers />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/fonts" element={<FontPreview />} />
         <Route path="/keys" element={<Navigate to="/developers" replace />} />
       </Routes>
     </div>
