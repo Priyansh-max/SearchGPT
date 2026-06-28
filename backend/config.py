@@ -94,6 +94,17 @@ class Settings(BaseModel):
     # Key store (AUTH_MODE=keystore) — managed multi-key + usage/quota
     KEYSTORE_PATH: str = os.getenv("KEYSTORE_PATH", "data/keystore.json")
     DEFAULT_KEY_QUOTA: int = int(os.getenv("DEFAULT_KEY_QUOTA", "0"))  # 0 = unlimited
+
+    # Accounts (AUTH_MODE=accounts) — multi-user, shared monthly credit pool, scoped keys
+    ACCOUNT_STORE_PATH: str = os.getenv("ACCOUNT_STORE_PATH", "data/accounts.json")
+    ACCOUNT_MONTHLY_CREDITS: int = int(os.getenv("ACCOUNT_MONTHLY_CREDITS", "1000"))
+
+    # Self-handled Google OAuth (approach B) + our own user sessions
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
+    SESSION_SECRET: str = os.getenv("SESSION_SECRET", "")  # signs user session JWTs
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
     QUOTA_ENABLED: bool = os.getenv("QUOTA_ENABLED", "False").lower() in ["true", "1", "t"]
     ANALYTICS_ENABLED: bool = os.getenv("ANALYTICS_ENABLED", "False").lower() in ["true", "1", "t"]
 
