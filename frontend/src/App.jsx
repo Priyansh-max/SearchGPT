@@ -5,6 +5,8 @@ import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
 import AdminDashboard from './components/AdminDashboard';
 import Developers from './components/Developers';
+import SignIn from './components/SignIn';
+import AuthCallback from './components/AuthCallback';
 import { 
   performWebSearch, 
   scrapeWebContent, 
@@ -198,6 +200,8 @@ function App() {
         />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/developers" element={<Developers />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/keys" element={<Navigate to="/developers" replace />} />
       </Routes>
     </div>
