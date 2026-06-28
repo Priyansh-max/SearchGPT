@@ -12,7 +12,7 @@ const SignIn = () => {
   const [params] = useSearchParams();
   const next = params.get('next') || '/developers';
 
-  const [mode, setMode] = useState('login'); // login | signup
+  const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'login'); // login | signup
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
