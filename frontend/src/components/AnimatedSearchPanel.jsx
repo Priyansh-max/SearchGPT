@@ -1,70 +1,76 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
- * Left-half graphic for the sign-in page: a dark dotted field with an animated "search radar"
- * (concentric pinging rings + a magnifier), floating web-node dots, and the SearchGPT brand.
- * Pure CSS/SVG animation — no deps.
+ * Left-half graphic for the sign-in page: an animated aurora mesh-gradient on near-black,
+ * a faint grid, the SearchGPT brand, and a tagline whose verb cycles
+ * (search → scrape → analyze → synthesize). Premium / Linear-Vercel style. Pure CSS + one timer.
  */
-const NODES = [
-  { top: '18%', left: '22%', d: '0s' },
-  { top: '30%', left: '74%', d: '0.6s' },
-  { top: '66%', left: '20%', d: '1.1s' },
-  { top: '74%', left: '70%', d: '0.3s' },
-  { top: '48%', left: '85%', d: '0.9s' },
-  { top: '58%', left: '40%', d: '1.4s' },
+const PHRASES = [
+  { verb: 'search', tail: 'the web' },
+  { verb: 'scrape', tail: 'any page' },
+  { verb: 'analyze', tail: 'sources' },
+  { verb: 'synthesize', tail: 'answers' },
 ];
 
-const AnimatedSearchPanel = () => (
-  <div className="relative h-full w-full overflow-hidden bg-neutral-950 text-white">
-    <style>{`
-      @keyframes sb-drift { from { background-position: 0 0; } to { background-position: 28px 28px; } }
-      @keyframes sb-float { 0%,100% { transform: translateY(0); opacity:.7 } 50% { transform: translateY(-10px); opacity:1 } }
-      @keyframes sb-ring { 0% { transform: scale(.4); opacity:.6 } 80% { opacity:0 } 100% { transform: scale(2.2); opacity:0 } }
-      @keyframes sb-spin { to { transform: rotate(360deg); } }
-    `}</style>
+const AnimatedSearchPanel = () => {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((p) => (p + 1) % PHRASES.length), 2400);
+    return () => clearInterval(t);
+  }, []);
+  const phrase = PHRASES[i];
 
-    {/* dotted field */}
-    <div
-      className="absolute inset-0 opacity-60"
-      style={{
-        backgroundImage: 'radial-gradient(rgba(255,255,255,0.18) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
-        animation: 'sb-drift 6s linear infinite',
-      }}
-    />
-    {/* glow */}
-    <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 45%, rgba(59,130,246,0.25), transparent 60%)' }} />
+  return (
+    <div className="relative h-full w-full overflow-hidden" style={{ background: '#07070b' }}>
+      <style>{`
+        @keyframes sb-blob1 { 0%,100% { transform: translate(-10%,-10%) scale(1); } 50% { transform: translate(10%,8%) scale(1.25); } }
+        @keyframes sb-blob2 { 0%,100% { transform: translate(8%,12%) scale(1.1); } 50% { transform: translate(-8%,-6%) scale(0.9); } }
+        @keyframes sb-blob3 { 0%,100% { transform: translate(0%,6%) scale(1); } 50% { transform: translate(6%,-10%) scale(1.2); } }
+        @keyframes sb-word { 0% { opacity:0; transform: translateY(8px); } 12%,88% { opacity:1; transform: translateY(0); } 100% { opacity:0; transform: translateY(-8px); } }
+      `}</style>
 
-    {/* floating web nodes */}
-    {NODES.map((n, i) => (
-      <div key={i} className="absolute" style={{ top: n.top, left: n.left, animation: `sb-float 3.6s ease-in-out ${n.d} infinite` }}>
-        <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_12px_2px_rgba(59,130,246,0.6)]" />
-      </div>
-    ))}
+      {/* aurora blobs */}
+      <div className="absolute -top-1/4 -left-1/4 w-[70%] h-[70%] rounded-full blur-[90px] opacity-70"
+        style={{ background: 'radial-gradient(circle, #2563eb 0%, transparent 70%)', animation: 'sb-blob1 14s ease-in-out infinite' }} />
+      <div className="absolute top-1/3 -right-1/4 w-[65%] h-[65%] rounded-full blur-[90px] opacity-60"
+        style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', animation: 'sb-blob2 18s ease-in-out infinite' }} />
+      <div className="absolute -bottom-1/4 left-1/4 w-[60%] h-[60%] rounded-full blur-[90px] opacity-50"
+        style={{ background: 'radial-gradient(circle, #06b6d4 0%, transparent 70%)', animation: 'sb-blob3 16s ease-in-out infinite' }} />
 
-    {/* center radar + magnifier */}
-    <div className="absolute inset-0 flex flex-col items-center justify-center">
-      <div className="relative w-44 h-44 flex items-center justify-center">
-        {[0, 1, 2].map((i) => (
-          <span key={i} className="absolute w-44 h-44 rounded-full border border-blue-400/40"
-            style={{ animation: `sb-ring 3s ease-out ${i * 1}s infinite` }} />
-        ))}
-        <div className="absolute w-44 h-44 rounded-full border border-dashed border-white/10" style={{ animation: 'sb-spin 24s linear infinite' }} />
-        {/* magnifier */}
-        <svg viewBox="0 0 24 24" className="w-16 h-16 text-white relative z-10" fill="none" stroke="currentColor" strokeWidth="1.6">
-          <circle cx="11" cy="11" r="6.5" />
-          <line x1="16" y1="16" x2="21" y2="21" strokeLinecap="round" />
-        </svg>
-      </div>
+      {/* faint grid */}
+      <div className="absolute inset-0 opacity-[0.12]"
+        style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '46px 46px' }} />
+      {/* vignette for text legibility */}
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.55) 100%)' }} />
 
-      <div className="mt-10 text-center px-8">
-        <h2 className="text-2xl font-semibold tracking-tight">SearchGPT Agent</h2>
-        <p className="mt-2 text-sm text-neutral-400 max-w-xs mx-auto">
-          Search, scrape, and synthesize the web through one API. Build with your keys.
+      {/* brand + tagline */}
+      <div className="relative h-full flex flex-col items-center justify-center text-center px-10 text-white">
+        <div className="flex items-center gap-2 mb-8">
+          <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="11" cy="11" r="6.5" /><line x1="16" y1="16" x2="21" y2="21" strokeLinecap="round" />
+          </svg>
+          <span className="text-xl font-semibold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>SearchGPT Agent</span>
+        </div>
+
+        <h2 className="text-3xl font-semibold tracking-tight leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          One API to
+        </h2>
+        <div className="h-10 mt-1 overflow-hidden">
+          <span key={i} className="inline-flex items-baseline gap-2 text-3xl font-semibold tracking-tight"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", animation: 'sb-word 2.4s ease-in-out' }}>
+            <span style={{ background: 'linear-gradient(90deg,#60a5fa,#a78bfa,#22d3ee)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>
+              {phrase.verb}
+            </span>
+            <span className="text-white/90">{phrase.tail}</span>
+          </span>
+        </div>
+
+        <p className="mt-8 text-sm text-white/50 max-w-xs">
+          Build with your keys. Free monthly credits, one endpoint, four modes.
         </p>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default AnimatedSearchPanel;
