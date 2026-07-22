@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { setToken } from '../services/auth';
+import { me, setToken } from '../services/auth';
 
 /**
  * Landing route for the backend Google OAuth redirect.
@@ -12,13 +12,18 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const token = params.get('token');
-    const next = params.get('next') || '/developers';
-    if (token) {
+    const next = params.get('next') || '/';
+    const finish = async () => {
+      if (!token) {
+        navigate('/signin', { replace: true });
+        return;
+      }
       setToken(token);
-      navigate(next, { replace: true });
-    } else {
-      navigate('/signin', { replace: true });
-    }
+      const current = await me();
+      const destination = current?.onboarding_completed ? next : `/onboarding?next=${encodeURIComponent(next)}`;
+      navigate(destination, { replace: true });
+    };
+    finish();
   }, [params, navigate]);
 
   return (

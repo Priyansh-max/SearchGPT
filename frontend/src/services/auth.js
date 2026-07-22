@@ -1,6 +1,6 @@
 /**
  * Frontend auth for the multi-user Developers model (approach B).
- * Talks to our own backend (self-handled Google OAuth + email/password); our session JWT
+ * Talks to our own backend (self-handled Google OAuth + passwordless email codes); our session JWT
  * is stored in localStorage. Endpoints are wired on the backend separately.
  */
 import { API_CONFIG } from '../config';
@@ -27,26 +27,24 @@ const parseError = async (r) => {
   try { return (await r.json()).detail || 'Request failed'; } catch { return 'Request failed'; }
 };
 
-export const login = async (email, password) => {
-  const r = await fetch(`${API}/api/auth/login`, {
+export const startEmailSignIn = async (email) => {
+  const r = await fetch(`${API}/api/auth/email/start`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email }),
   });
   if (!r.ok) throw new Error(await parseError(r));
-  const { token } = await r.json();
-  setToken(token);
-  return token;
+  return r.json();
 };
 
-export const signup = async (email, password, name) => {
-  const r = await fetch(`${API}/api/auth/signup`, {
+export const verifyEmailCode = async (email, code) => {
+  const r = await fetch(`${API}/api/auth/email/verify`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, code }),
   });
   if (!r.ok) throw new Error(await parseError(r));
-  const { token } = await r.json();
-  setToken(token);
-  return token;
+  const body = await r.json();
+  setToken(body.token);
+  return body;
 };
 
 export const me = async () => {
@@ -59,8 +57,17 @@ export const me = async () => {
 };
 
 /** Kicks off the backend-hosted Google OAuth flow; backend redirects back with our token. */
-export const loginWithGoogle = (next = '/developers') => {
+export const loginWithGoogle = (next = '/') => {
   window.location.href = `${API}/api/auth/google/login?next=${encodeURIComponent(next)}`;
+};
+
+export const completeOnboarding = async ({ name, picture, heard_about, use_cases }) => {
+  const r = await authFetch('/api/account/onboarding', {
+    method: 'POST',
+    body: JSON.stringify({ name, picture, heard_about, use_cases }),
+  });
+  if (!r.ok) throw new Error(await parseError(r));
+  return r.json();
 };
 
 export const logout = () => clearToken();

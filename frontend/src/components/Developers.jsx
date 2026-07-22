@@ -4,7 +4,10 @@ import {
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
 import { me, authFetch, isAuthed, logout } from '../services/auth';
+import { FiLoader, FiLogOut, FiUser } from 'react-icons/fi';
 import CodeTabs, { buildQuerySnippets } from './CodeTabs';
+import ToastStack from './ToastStack';
+import { useToasts } from '../hooks/useToasts';
 
 const TABS = [['keys', 'API Keys'], ['usage', 'Usage'], ['docs', 'Docs'], ['selfhost', 'Self-host']];
 const MODES = ['search', 'scrape', 'analyze', 'news'];
@@ -34,6 +37,8 @@ const Developers = () => {
   const [copied, setCopied] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
+  const { toasts, showToast, removeToast } = useToasts();
 
   const gotoSignin = useCallback(() => navigate('/signin?next=/developers'), [navigate]);
 
@@ -77,7 +82,25 @@ const Developers = () => {
     const r = await authFetch(`/api/account/keys/${id}`, { method: 'DELETE' });
     if (r.ok) loadAll();
   };
-  const copy = async (t, w) => { try { await navigator.clipboard.writeText(t); setCopied(w); setTimeout(() => setCopied(''), 1500); } catch {} };
+  const copy = async (t, w) => { try { await navigator.clipboard.writeText(t); setCopied(w); setTimeout(() => setCopied(''), 1500); } catch {
+    // Clipboard can be unavailable in insecure contexts.
+  } };
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    logout();
+    setUser(null);
+    setKeys([]);
+    setUsage(null);
+    setNewKey(null);
+    setCreating(false);
+    setSigningOut(false);
+    showToast('Signed out.', 'success');
+    navigate('/', { replace: true });
+  };
+
+  const displayName = user?.name || user?.email?.split('@')[0] || 'Account';
 
   const acct = usage?.account || user;
   const remaining = acct ? acct.credits_remaining : 0;
@@ -88,13 +111,31 @@ const Developers = () => {
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-black">
+      <ToastStack toasts={toasts} onDismiss={removeToast} />
       <header className="border-b border-gray-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <button onClick={() => navigate('/')} className="text-sm text-gray-600 dark:text-neutral-300 hover:text-black dark:hover:text-white">← SearchGPT Agent</button>
           <h1 className="text-base font-medium text-black dark:text-white">Developers</h1>
-          {user
-            ? <button onClick={() => { logout(); setUser(null); setKeys([]); setUsage(null); }} className="text-xs text-gray-500 dark:text-neutral-400 hover:text-black dark:hover:text-white">Sign out</button>
-            : <button onClick={gotoSignin} className="text-xs text-black dark:text-white font-medium">Sign in</button>}
+          {user ? (
+            <div className="flex items-center gap-3">
+              <div className="hidden min-w-0 items-center gap-2 sm:flex">
+                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-md bg-gray-100 text-gray-600 dark:bg-neutral-800 dark:text-neutral-300">
+                  {user.picture ? <img src={user.picture} alt="User avatar" className="h-full w-full object-cover" /> : <FiUser className="h-3.5 w-3.5" />}
+                </span>
+                <span className="max-w-32 truncate text-xs font-medium text-gray-700 dark:text-neutral-200">{displayName}</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black disabled:cursor-not-allowed disabled:opacity-70 dark:text-neutral-400 dark:hover:text-white"
+              >
+                {signingOut ? <FiLoader className="h-3.5 w-3.5 animate-spin" /> : <FiLogOut className="h-3.5 w-3.5" />}
+                {signingOut ? 'Signing out...' : 'Sign out'}
+              </button>
+            </div>
+          ) : (
+            <button onClick={gotoSignin} className="text-xs text-black dark:text-white font-medium">Sign in</button>
+          )}
         </div>
         <div className="max-w-5xl mx-auto px-6">
           <nav className="flex gap-1">

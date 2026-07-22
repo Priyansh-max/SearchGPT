@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import ToolSelection from './ToolSelection';
 import DottedGrid from './UI_components/DottedGrid';
 import { FaArrowRightLong } from "react-icons/fa6"
-import { isAuthed, logout } from '../services/auth';
+import { isAuthed, logout, me } from '../services/auth';
+import { FiKey, FiLoader, FiLogOut, FiUser } from 'react-icons/fi';
+import ToastStack from './ToastStack';
+import { useToasts } from '../hooks/useToasts';
 
 
 const LandingPage = ({ 
@@ -12,15 +15,23 @@ const LandingPage = ({
   handleSearch, 
   handleKeyPress, 
   selectedTool, 
-  setSelectedTool, 
-  userName 
+  setSelectedTool
 }) => {
   const navigate = useNavigate();
   const textareaRef = useRef(null);
-  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  const profileMenuRef = useRef(null);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [authed, setAuthed] = useState(isAuthed());
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(isAuthed());
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [placeholderText, setPlaceholderText] = useState('');
+  const { toasts, showToast, removeToast } = useToasts();
+  const showDevelopersSoon = () => {
+    showToast('Developer dashboard and API keys are coming soon.', 'info');
+  };
+
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' ||
@@ -39,6 +50,40 @@ const LandingPage = ({
       localStorage.setItem('theme', 'light');
     }
   }, [isDark]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadUser = async () => {
+      if (!isAuthed()) {
+        setAuthed(false);
+        setUser(null);
+        setAuthLoading(false);
+        return;
+      }
+      setAuthLoading(true);
+      const current = await me();
+      if (!active) return;
+      setUser(current);
+      setAuthed(!!current);
+      setAuthLoading(false);
+      if (!current) showToast('Session expired. Sign in again.', 'info');
+    };
+
+    loadUser();
+    return () => { active = false; };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (!profileOpen) return undefined;
+    const onPointerDown = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [profileOpen]);
 
   // Typewriter effect for placeholder
   useEffect(() => {
@@ -93,31 +138,24 @@ const LandingPage = ({
     }
   }, [query]);
 
-  // Update date and time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentDateTime(new Date());
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, []);
+  const displayName = user?.name || user?.email?.split('@')[0] || 'Account';
+  const userInitials = (displayName || 'U').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U';
 
-  // Format the date and time
-  const formatDate = (date) => {
-    const options = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    };
-    return date.toLocaleDateString('en-US', options);
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    logout();
+    setAuthed(false);
+    setUser(null);
+    setProfileOpen(false);
+    setSigningOut(false);
+    showToast('Signed out.', 'success');
+    navigate('/', { replace: true });
   };
 
   return (
-    <div className="relative flex-1 flex flex-col items-center min-h-screen bg-gray-200 dark:bg-neutral-800 gap-[1px] overflow-x-hidden overflow-y-auto">
+    <div className="relative flex h-screen flex-col items-center overflow-hidden bg-gray-200 dark:bg-neutral-800 gap-[1px]">
+      <ToastStack toasts={toasts} onDismiss={removeToast} />
       {/* Animated glow overlay */}
       <div
         className="absolute left-0 top-0 w-[20%] h-[100%] pointer-events-none z-0 will-change-transform"
@@ -135,7 +173,7 @@ const LandingPage = ({
       </div>
 
       {/* navbar — fixed height, does not stretch */}
-      <div className="relative z-10 flex w-full h-14 shrink-0 flex-nowrap gap-[1px]">
+      <div className="relative z-50 flex w-full h-14 shrink-0 flex-nowrap gap-[1px]">
         <div className="flex-1 bg-white dark:bg-black rounded-lg" />
         <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5">
           {/* Left — Logo / Brand */}
@@ -172,7 +210,7 @@ const LandingPage = ({
             {/* Developers */}
             <button
               type="button"
-              onClick={() => navigate('/developers')}
+              onClick={showDevelopersSoon}
               className="text-sm font-medium text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors"
               title="API & keys"
             >
@@ -180,31 +218,76 @@ const LandingPage = ({
             </button>
 
             {/* Auth */}
-            {authed ? (
+            {authLoading ? (
+              <div className="flex h-8 items-center gap-2 rounded-md border border-gray-200 px-2.5 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+                <FiLoader className="h-3.5 w-3.5 animate-spin" />
+                <span className="hidden sm:inline">Loading</span>
+              </div>
+            ) : authed ? (
+              <div ref={profileMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((open) => !open)}
+                  className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 transition-colors hover:border-gray-400 hover:text-black dark:border-neutral-800 dark:bg-black dark:text-gray-200 dark:hover:border-neutral-600 dark:hover:text-white"
+                  aria-expanded={profileOpen}
+                  aria-haspopup="menu"
+                  aria-label="Open profile menu"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gray-100 text-[11px] font-semibold text-gray-700 dark:bg-neutral-900 dark:text-neutral-200">
+                    {user?.picture ? <img src={user.picture} alt="User avatar" className="h-full w-full object-cover" /> : userInitials}
+                  </span>
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 top-11 z-50 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950" role="menu">
+                    <div className="border-b border-gray-100 px-3 py-3 dark:border-neutral-800">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-neutral-900 dark:text-neutral-200">
+                          {user?.picture ? <img src={user.picture} alt="User avatar" className="h-full w-full object-cover" /> : <FiUser className="h-4 w-4" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-black dark:text-white">{displayName}</div>
+                          <div className="truncate text-xs text-gray-500 dark:text-neutral-400">{user?.email}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); showToast('Profile page is next on the setup list.', 'info'); }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 hover:text-black dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-white"
+                      role="menuitem"
+                    >
+                      <FiUser className="h-4 w-4" /> Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); showDevelopersSoon(); }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 hover:text-black dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-white"
+                      role="menuitem"
+                    >
+                      <FiKey className="h-4 w-4" /> API keys
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      disabled={signingOut}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-70 dark:text-red-300 dark:hover:bg-red-500/10"
+                      role="menuitem"
+                    >
+                      {signingOut ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiLogOut className="h-4 w-4" />}
+                      {signingOut ? 'Signing out...' : 'Sign out'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
               <button
                 type="button"
-                onClick={() => { logout(); setAuthed(false); }}
-                className="text-sm font-medium text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors"
+                onClick={() => navigate('/signin?mode=signup&next=/')}
+                className="rounded-lg bg-black px-3.5 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
               >
-                Sign out
+                Get started
               </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate('/signin?next=/developers')}
-                  className="text-sm font-medium text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white transition-colors"
-                >
-                  Sign in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/signin?mode=signup&next=/developers')}
-                  className="px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  Sign up
-                </button>
-              </>
             )}
 
             {/* Divider */}
@@ -303,15 +386,15 @@ const LandingPage = ({
             </form>
           </div>
           <div className="flex items-center justify-center mt-4">
-            <p className="text-sm relative mt-3 text-gray-500 dark:text-neutral-400">Data API is live —</p>
+            <p className="text-sm relative mt-3 text-gray-500 dark:text-neutral-400">Data API is coming soon —</p>
             <button
                 type="button"
-                onClick={() => navigate('/developers')}
+                onClick={showDevelopersSoon}
                 className="mt-3 ml-2 relative inline-flex items-center justify-center text-sm font-medium text-gray-800 dark:text-gray-100 after:absolute after:left-0 after:-bottom-0.5 after:h-[0.5px] after:w-0
                 after:bg-current after:transition-all after:duration-300
                 hover:after:w-full"
               >
-                get your API key
+                API keys soon
             </button>
 
           </div>
@@ -348,20 +431,18 @@ const LandingPage = ({
       </div>
 
       {/* footer — fixed height, does not stretch */}
-      <div className="relative z-10 flex w-full h-28 shrink-0 flex-nowrap gap-[1px]">
+      <div className="relative z-10 flex w-full h-16 shrink-0 flex-nowrap gap-[1px]">
         <div className="flex-1  shrink-0 bg-white dark:bg-black rounded-lg" />
-        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex flex-col items-center justify-center py-4 gap-1">
-          {/* About link */}
+        <div className="w-full max-w-4xl shrink-0 bg-white dark:bg-black rounded-lg flex items-center justify-between px-5 gap-4">
           <button
             type="button"
             onClick={() => setShowAboutModal(true)}
-            className="text-sm font-medium tracking-wide text-gray-700 dark:text-neutral-300  hover:text-black dark:hover:text-gray-200 transition-colors"
+            className="shrink-0 text-sm font-medium tracking-wide text-gray-700 dark:text-neutral-300 hover:text-black dark:hover:text-gray-200 transition-colors"
           >
             About SearchGPT
           </button>
 
-          {/* Social links */}
-          <div className="flex items-center gap-4 mt-1">
+          <div className="flex min-w-0 items-center justify-center gap-4">
             <a href="https://x.com/Priyanshh91" target="_blank" rel="noopener noreferrer"
               className="text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors hover:scale-110" title="X (Twitter)">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -376,14 +457,8 @@ const LandingPage = ({
             </a>
           </div>
 
-          {/* Server time */}
-          <p className="text-[12px] text-gray-600 dark:text-neutral-400  tracking-wide">
-            {formatDate(currentDateTime)}
-          </p>
-
-          {/* Copyright / trademark */}
-          <p className="text-[12px] text-gray-600 dark:text-neutral-400  tracking-wider">
-            &copy; {new Date().getFullYear()} SearchGPT - All rights reserved.
+          <p className="hidden truncate text-[12px] tracking-wider text-gray-600 dark:text-neutral-400 sm:block">
+            &copy; {new Date().getFullYear()} SearchGPT
           </p>
         </div>
         <div className="flex-1  shrink-0 bg-white dark:bg-black rounded-lg" />

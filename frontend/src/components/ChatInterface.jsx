@@ -4,6 +4,7 @@ import ChatMessage from './ChatMessage';
 import MessageInput from './MessageInput';
 import LoadingIndicator from './LoadingIndicator';
 import TypewriterBlurFade from './TypewriterBlurFade';
+import { me } from '../services/auth';
 
 const ChatInterface = ({ 
   messages, 
@@ -17,10 +18,13 @@ const ChatInterface = ({
   handleKeyPress, 
   selectedTool, 
   setSelectedTool,
-  onResetChat 
+  onResetChat,
+  onDevelopersLocked 
 }) => {
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'dark' ||
@@ -28,6 +32,23 @@ const ChatInterface = ({
     }
     return false;
   });
+
+
+  useEffect(() => {
+    let active = true;
+    const loadUser = async () => {
+      setUserLoading(true);
+      const current = await me();
+      if (!active) return;
+      setUser(current);
+      setUserLoading(false);
+    };
+    loadUser();
+    return () => { active = false; };
+  }, [messages]);
+
+  const displayName = user?.name || user?.email?.split('@')[0] || 'Account';
+  const userInitials = (displayName || 'U').split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U';
 
   // Sync dark class on <html> and persist
   useEffect(() => {
@@ -74,16 +95,31 @@ const ChatInterface = ({
             <h1 className="text-base text-center font-medium text-black dark:text-white">SearchGPT Agent <span className="text-xs text-gray-500 dark:text-neutral-400">Playground</span></h1>
           </div>
 
-          {/* Right: Developers link + theme toggle */}
+          {/* Right: credits/profile + theme toggle */}
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => navigate('/developers')}
-              className="hidden sm:inline-flex items-center h-9 px-3 rounded-lg text-sm text-gray-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
-              title="API & keys"
-            >
-              Developers
-            </button>
+            {userLoading ? (
+              <div className="hidden h-8 items-center rounded-md border border-gray-200 px-2.5 text-xs text-gray-400 dark:border-neutral-800 dark:text-neutral-500 sm:flex">Loading</div>
+            ) : user ? (
+              <button
+                type="button"
+                onClick={onDevelopersLocked}
+                className="hidden items-center gap-2 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:border-gray-400 hover:text-black dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:text-white sm:flex"
+                title="Developer tools coming soon"
+              >
+                <span className="font-medium">{(user.credits_remaining ?? 0).toLocaleString()} credits</span>
+                <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded bg-gray-100 text-[10px] font-semibold text-gray-700 dark:bg-neutral-900 dark:text-neutral-200">
+                  {user.picture ? <img src={user.picture} alt="User avatar" className="h-full w-full object-cover" /> : userInitials}
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/signin?mode=signup&next=/c')}
+                className="hidden rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 sm:inline-flex"
+              >
+                Sign in
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setIsDark(!isDark)}

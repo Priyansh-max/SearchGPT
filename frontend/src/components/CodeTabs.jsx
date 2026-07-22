@@ -86,7 +86,9 @@ const CodeTabs = ({ tabs }) => {
   const current = tabs[active] || tabs[0];
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(current.code); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
+    try { await navigator.clipboard.writeText(current.code); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {
+      // Clipboard can be unavailable in insecure contexts.
+    }
   };
 
   return (
