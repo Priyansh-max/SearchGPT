@@ -146,7 +146,8 @@ class NewsSearcher:
                                     "source": source,
                                     "url": url,
                                     "published_date": published_date,
-                                    "snippet": snippet
+                                    "snippet": snippet,
+                                    "image": article.get('image') or article.get('urlToImage') or ""
                                 })
                             
                             if results:

@@ -6,6 +6,9 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from dotenv import load_dotenv
 
+from config import settings
+from services.llm_provider import build_provider_chain, generate_with_fallback
+
 # Load environment variables
 load_dotenv()
 
@@ -17,57 +20,122 @@ class LLMProcessor:
     """
     
     def __init__(self):
-        """Initialize the LLM processor with API key from environment variables"""
-        try:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                logger.warning("GEMINI_API_KEY not found in environment variables")
-                raise ValueError("GEMINI_API_KEY is required")
-                
-            # Configure the Gemini API
-            genai.configure(api_key=api_key)
-            
-            # Get available models
-            self.available_models = [m.name for m in genai.list_models() 
-                                    if 'generateContent' in m.supported_generation_methods]
-            
-            # Select the appropriate model (preferring Gemini Flash if available)
-            if 'models/gemini-2.0-flash' in self.available_models:
-                self.model_name = 'models/gemini-2.0-flash'
-            elif 'models/gemini-1.5-flash' in self.available_models:
-                self.model_name = 'models/gemini-1.5-flash'
-            elif 'models/gemini-1.0-pro' in self.available_models:
-                self.model_name = 'models/gemini-1.0-pro'
-            else:
-                self.model_name = self.available_models[0] if self.available_models else None
-                
-            if not self.model_name:
-                raise ValueError("No suitable Gemini models available")
-                
-            logger.info(f"Using LLM model: {self.model_name}")
-            
-            # Configure model with safe settings
-            self.model = genai.GenerativeModel(
-                model_name=self.model_name,
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                },
-                generation_config={
-                    "temperature": 0.2,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 2048,
-                }
+        """Store config only — no network/keys touched here. The Gemini model and the
+        provider fallback chain are built lazily on first use so this module imports
+        cleanly without a GEMINI_API_KEY (needed for offline tests and self-host setup)."""
+        self.model = None
+        self.model_name = None
+        self._provider_chain = None
+        self._embedder = None
+        self._safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        }
+        # max_output_tokens raised 2048 -> settings.MAX_OUTPUT_TOKENS (8192) per Problem 2.
+        self._generation_config = {
+            "temperature": 0.2,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": settings.MAX_OUTPUT_TOKENS,
+        }
+
+    def _ensure_model(self):
+        """Lazily configure Gemini and build the model on first use. NEEDS KEYS at runtime."""
+        if self.model is not None:
+            return self.model
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is required")
+
+        genai.configure(api_key=api_key)
+        configured_model = (settings.GEMINI_MODEL or os.getenv("GEMINI_MODEL", "")).strip()
+        if configured_model:
+            self.model_name = self._normalize_model_name(configured_model)
+        else:
+            available = [m.name for m in genai.list_models()
+                         if 'generateContent' in m.supported_generation_methods]
+            preferred_models = [
+                'models/gemini-3.5-flash-lite',
+                'models/gemini-3.5-flash',
+                'models/gemini-3.1-flash-lite',
+                'models/gemini-2.5-flash',
+                'models/gemini-2.0-flash-lite',
+                'models/gemini-2.0-flash',
+                'models/gemini-1.5-flash',
+                'models/gemini-1.0-pro',
+            ]
+            self.model_name = next((m for m in preferred_models if m in available),
+                                   available[0] if available else None)
+
+        if not self.model_name:
+            raise ValueError("No suitable Gemini models available")
+
+        logger.info(f"Using LLM model: {self.model_name}")
+        self.model = genai.GenerativeModel(
+            model_name=self.model_name,
+            safety_settings=self._safety_settings,
+            generation_config=self._generation_config_for_model(self.model_name),
+        )
+        return self.model
+
+    @staticmethod
+    def _normalize_model_name(model_name: str) -> str:
+        return model_name if model_name.startswith("models/") else f"models/{model_name}"
+
+    def _generation_config_for_model(self, model_name: str) -> Dict[str, Any]:
+        config = dict(self._generation_config)
+        bare_model = model_name.removeprefix("models/")
+        if bare_model.startswith("gemini-3."):
+            config.pop("temperature", None)
+            config.pop("top_p", None)
+            config.pop("top_k", None)
+        return config
+
+    def _ensure_providers(self):
+        """Build the Gemini -> OpenAI fallback chain on first use (OpenAI only if a key is set)."""
+        if self._provider_chain is None:
+            self._provider_chain = build_provider_chain(
+                gemini_model=self._ensure_model(),
+                openai_model=settings.OPENAI_MODEL,
+                openai_api_key=settings.OPENAI_API_KEY or None,
             )
-            
-            logger.info("LLM processor initialized successfully")
-            
-        except Exception as e:
-            logger.error(f"Error initializing LLM processor: {str(e)}")
-            raise
+        return self._provider_chain
+
+    def _get_embedder(self):
+        """Lazily build the embedder (falls back to the zero-dep hashing embedder)."""
+        if self._embedder is None:
+            from services.retrieval import get_embedder
+            self._embedder = get_embedder(
+                settings.EMBEDDING_MODE,
+                openai_api_key=settings.OPENAI_API_KEY or None,
+            )
+        return self._embedder
+
+    def _build_context(self, query: str, scraped_results: List[Dict[str, Any]]) -> str:
+        """
+        Select the most query-relevant passages across sources (RAG, Problem 2) instead of
+        blindly truncating each source. Caps sources at MAX_SOURCES, retrieves passages within
+        a token budget that fits the smallest model in the fallback chain.
+        """
+        from services.retrieval import retrieve_relevant_passages
+
+        sources = (scraped_results or [])[: settings.MAX_SOURCES]
+        passages = retrieve_relevant_passages(
+            query,
+            sources,
+            self._get_embedder(),
+            chunk_size=settings.CHUNK_SIZE,
+            overlap=settings.CHUNK_OVERLAP,
+            token_budget=settings.RETRIEVAL_TOKEN_BUDGET,
+        )
+        parts = []
+        for i, p in enumerate(passages):
+            label = p.source_title or p.source_url or f"Source {i + 1}"
+            parts.append(f"Source {i + 1} — {label} ({p.source_url}):\n{p.text}")
+        return "\n\n".join(parts)
     
     async def refine_search_query(self, original_query: str) -> str:
         """
@@ -99,8 +167,8 @@ class LLMProcessor:
             logger.info(f"Query refined: '{original_query}' -> '{refined_query}'")
             return refined_query
             
-        except Exception as e:
-            logger.error(f"Error refining search query: {str(e)}")
+        except Exception:
+            logger.warning("LLM query refinement failed; using original query")
             return original_query
     
     async def process_search_results(self, query: str, search_results: List[Dict[str, Any]]) -> str:
@@ -128,15 +196,16 @@ class LLMProcessor:
             
             {results_text}
             
-            Please provide a the search results that you found on the web 
-            Your response should:
-            1. Mainly focused on providing as many web searched reference links as possible
-            2. Directly answer the user's question
-            3. Provide relevant context and information
-            4. Cite sources for key information (use the format [1], [2], etc.)
-            5. Include a "References" section at the end with numbered links
-            
-            Format your response in Markdown for readability.
+            Write a precise, source-backed answer to the user's query.
+            Requirements:
+            1. Use a clear Markdown structure: short direct answer, then bullet points for important details.
+            2. Keep it focused on web information and source-backed facts; do not drift into generic explanation.
+            3. Cite every factual claim with inline reference numbers like [1], [2].
+            4. Do not include a separate References/Sources section; the UI renders sources separately.
+            5. Prefer bullets over long paragraphs. Use bold labels when they improve scanability.
+            6. Avoid filler, caveats, and generic intro text.
+
+            Format your response in clean Markdown.
             """
             
             response = await self._generate_content(prompt)
@@ -148,8 +217,8 @@ class LLMProcessor:
                 
             return response
             
-        except Exception as e:
-            logger.error(f"Error processing search results: {str(e)}")
+        except Exception:
+            logger.warning("LLM search synthesis failed; using basic formatter")
             # Fallback to basic formatting
             return self._format_basic_results(query, search_results)
     
@@ -161,21 +230,10 @@ class LLMProcessor:
             return "No content was found to process."
             
         try:
-            # Prepare content for the LLM prompt
-            # Limit content length to avoid exceeding context window
-            contents_text = ""
-            for i, result in enumerate(scraped_results[:5]):  # Limit to first 5 results
-                contents_text += f"Source {i+1}:\n"
-                contents_text += f"Title: {result.get('title', 'No title')}\n"
-                contents_text += f"URL: {result.get('url', 'No URL')}\n"
-                
-                # Truncate content to reasonable length
-                content = result.get('content', 'No content available')
-                if len(content) > 1500:
-                    content = content[:1500] + "...(truncated)"
-                    
-                contents_text += f"Content: {content}\n\n"
-            
+            # RAG: select the most query-relevant passages across sources instead of
+            # truncating each source to a fixed character budget (Problem 2).
+            contents_text = self._build_context(query, scraped_results)
+
             prompt = f"""
             You are an expert web scrapper agent who helps users find information online and across the web.
             
@@ -185,14 +243,15 @@ class LLMProcessor:
             
             {contents_text}
             
-            Please synthesize this information into a comprehensive response to the user's query.
-            Your response should:
-            1. Directly output the content in a way how a scrapper would output the content
-            2. output what is asked by the user exactly as it is
-            3. End with a "References" section at the end with numbered links to the scrapped content
-            4. Do not add any additional text or explanations
+            Synthesize the scraped content into a precise extraction summary for the user's query.
+            Requirements:
+            1. Start with a short result summary.
+            2. Add bullets for extracted facts, fields, code snippets, or assets found in the scraped pages.
+            3. If code appears in the source, preserve it in fenced Markdown code blocks with a language tag when obvious.
+            4. Cite claims with inline reference numbers like [1], [2].
+            5. Use only the supplied scraped content and do not add a separate References/Sources section.
 
-            Format your response in Markdown for readability.
+            Format your response in clean Markdown.
             """
             
             response = await self._generate_content(prompt)
@@ -204,8 +263,8 @@ class LLMProcessor:
                 
             return response
             
-        except Exception as e:
-            logger.error(f"Error processing scraped content: {str(e)}")
+        except Exception:
+            logger.warning("LLM scrape synthesis failed; using basic formatter")
             # Fallback to basic formatting
             return self._format_basic_scraped_content(query, scraped_results)
     
@@ -229,20 +288,9 @@ class LLMProcessor:
                     "url": result.get("url", ""),
                 })
             
-            # Prepare content for the LLM prompt
-            contents_text = ""
-            for i, result in enumerate(scraped_results[:5]):  # Limit to first 5 results
-                contents_text += f"Source {i+1}:\n"
-                contents_text += f"Title: {result.get('title', 'No title')}\n"
-                contents_text += f"URL: {result.get('url', 'No URL')}\n"
-                
-                # Truncate content to reasonable length
-                content = result.get('content', 'No content available')
-                if len(content) > 1200:
-                    content = content[:1200] + "...(truncated)"
-                    
-                contents_text += f"Content: {content}\n\n"
-            
+            # RAG: relevant-passage selection instead of fixed truncation (Problem 2).
+            contents_text = self._build_context(query, scraped_results)
+
             prompt = f"""
             You are an expert content analyser who helps synthesize data from multiple sources combine them and create a comprehensive analysis.
             
@@ -252,21 +300,29 @@ class LLMProcessor:
             
             {contents_text}
             
-            Based on these sources, please provide:
-            1. A concise summary (2-3 paragraphs) answering the query
-            2. A list of 5-7 key points extracted from the sources
-            
+            This is Deep Analysis mode. Produce a well-researched, source-backed report from the supplied sources.
+            Requirements:
+            1. Show that research was performed: explain the research path and what kinds of sources were compared.
+            2. Give a strong answer first, then structured bullets and detailed findings.
+            3. Include inline citation numbers like [1], [2] in summary, takeaways, and detailed findings.
+            4. Separate confirmed findings from gaps/caveats. Do not invent facts beyond the supplied content.
+            5. Make the output meaningfully deeper than Web Search: include 5-8 key takeaways and 6-10 detailed findings when sources support them.
+
             Format your response as a JSON object with the following structure EXACTLY:
             {{
-                "summary": "The concise summary text here",
-                "key_points": ["Key point 1", "Key point 2", ...]
+                "summary": "A 2-4 paragraph cited executive summary",
+                "research_steps": ["What source/category was checked and why", "..."],
+                "key_points": ["Cited key takeaway", "..."],
+                "detailed_findings": ["Cited deeper finding with context", "..."],
+                "source_notes": ["Brief source quality or disagreement note", "..."],
+                "limitations": ["Known gap or caveat from available sources", "..."]
             }}
-            
+
             Only return the JSON object, nothing else. Make sure your JSON is valid with proper quotes and formatting.
             """
-            
-            response = await self._generate_content(prompt)
-            
+
+            response = await self._generate_content(prompt, json_mode=True)
+
             try:
                 # Parse JSON response
                 # Clean the response to handle common formatting issues
@@ -288,6 +344,9 @@ class LLMProcessor:
                 
                 if "key_points" not in result:
                     result["key_points"] = []
+                for field in ("research_steps", "detailed_findings", "source_notes", "limitations"):
+                    if field not in result or not isinstance(result[field], list):
+                        result[field] = []
                     
                 result["sources"] = sources
                 return result
@@ -316,12 +375,16 @@ class LLMProcessor:
                 
                 return {
                     "summary": summary,
+                    "research_steps": [],
                     "key_points": key_points,
+                    "detailed_findings": [],
+                    "source_notes": [],
+                    "limitations": [],
                     "sources": sources
                 }
                 
-        except Exception as e:
-            logger.error(f"Error synthesizing information: {str(e)}")
+        except Exception:
+            logger.warning("LLM analysis synthesis failed; using basic formatter")
             # Create a basic summary from the content if possible
             try:
                 combined_content = ""
@@ -334,13 +397,21 @@ class LLMProcessor:
                 
                 return {
                     "summary": fallback_summary,
+                    "research_steps": [],
                     "key_points": ["Information could not be fully analyzed due to a processing error."],
+                    "detailed_findings": [],
+                    "source_notes": [],
+                    "limitations": [],
                     "sources": sources if 'sources' in locals() else []
                 }
             except:
                 return {
                     "summary": "An error occurred while synthesizing information.",
+                    "research_steps": [],
                     "key_points": [],
+                    "detailed_findings": [],
+                    "source_notes": [],
+                    "limitations": [],
                     "sources": sources if 'sources' in locals() else []
                 }
     
@@ -371,19 +442,16 @@ class LLMProcessor:
             
             {news_text}
             
-            Please provide a comprehensive overview of the news related to this query.
-            Your response should:
-            1. Summarize the key developments and trends
-            2. Highlight important details from multiple sources
-            3. Provide context and background if relevant
-            4. Cite sources for key information (use the format [1], [2], etc.)
-            5. Include a "References" section at the end with numbered links to articles
-            6. For each reference, format it as: [Title] - [Source] ([Date]) with a "Read more" link to the URL
-            
-            Example reference format:
-            1. Article Title - News Source (Publication Date) [Read more](URL)
-            
-            Format your response in Markdown for readability.
+            Write a lively but concise, source-backed news brief.
+            Requirements:
+            1. Start with the key development in 1-2 sentences.
+            2. Use bullets grouped under clear Markdown headings such as "What happened", "Why it matters", and "What to watch".
+            3. Cite every claim with inline reference numbers like [1], [2].
+            4. Include publication dates only when present in the article metadata.
+            5. Do not include a separate References/Sources section; the UI renders sources separately.
+            6. Avoid filler and speculation.
+
+            Format your response in clean Markdown.
             """
             
             response = await self._generate_content(prompt)
@@ -395,20 +463,23 @@ class LLMProcessor:
                 
             return response
             
-        except Exception as e:
-            logger.error(f"Error processing news results: {str(e)}")
+        except Exception:
+            logger.warning("LLM news synthesis failed; using basic formatter")
             # Fallback to basic formatting
             return self._format_basic_news(query, news_results)
     
-    async def _generate_content(self, prompt: str) -> str:
+    async def _generate_content(self, prompt: str, *, json_mode: bool = False) -> str:
         """
-        Helper method to generate content using the Gemini API
+        Generate content through the provider fallback chain (Gemini async -> OpenAI).
+        Fixes the old blocking synchronous call and adds rate-limit fallback.
         """
         try:
-            response = self.model.generate_content(prompt)
-            return response.text
+            providers = self._ensure_providers()
+            result = await generate_with_fallback(prompt, providers, json_mode=json_mode)
+            logger.info(f"LLM answered via: {result.provider}")
+            return result.text
         except Exception as e:
-            logger.error(f"Error generating content from LLM: {str(e)}")
+            logger.warning("LLM fallback chain exhausted; using non-LLM formatter")
             raise
     
     def _format_basic_results(self, query: str, results: List[Dict[str, Any]]) -> str:

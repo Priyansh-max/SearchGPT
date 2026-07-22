@@ -7,6 +7,23 @@ import time
 
 logger = logging.getLogger(__name__)
 
+_BLOCKED_RESOURCE_TYPES = {"image", "media", "font", "stylesheet"}
+
+
+async def _block_heavy_route(route):
+    """Abort heavy resource requests (images/media/fonts/css); we only want text."""
+    try:
+        if route.request.resource_type in _BLOCKED_RESOURCE_TYPES:
+            await route.abort()
+        else:
+            await route.continue_()
+    except Exception:
+        try:
+            await route.continue_()
+        except Exception:
+            pass
+
+
 class PlaywrightBrowser:
     """
     A utility class for Playwright browser automation - replacing Selenium
@@ -93,7 +110,54 @@ class PlaywrightBrowser:
         except Exception as e:
             logger.error(f"Error starting Playwright browser: {str(e)}")
             return False
-    
+
+    async def _ensure_browser(self):
+        """Launch the shared browser ONCE (no shared context/page). Each scrape makes its own."""
+        if self.browser:
+            return self.browser
+        if not self.playwright:
+            self.playwright = await async_playwright().start()
+        self.browser = await self.playwright.chromium.launch(
+            headless=self.headless,
+            args=[
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-blink-features=AutomationControlled',
+            ],
+        )
+        logger.info("Playwright browser launched (shared, per-request contexts)")
+        return self.browser
+
+    async def scrape_isolated(self, url: str, *, block_resources: bool = True,
+                              timeout_ms: Optional[int] = None):
+        """
+        Open a FRESH isolated context + page for this one scrape (Problem 1 fix for the
+        shared-page race), navigate, and return (html, final_url). The context is always
+        closed. Heavy resources (images/media/fonts/css) are blocked for memory + speed.
+        """
+        await self._ensure_browser()
+        context = await self.browser.new_context(
+            user_agent=settings.USER_AGENT,
+            viewport={'width': 1280, 'height': 800},
+            ignore_https_errors=True,
+        )
+        try:
+            if block_resources:
+                await context.route("**/*", _block_heavy_route)
+            page = await context.new_page()
+            page.set_default_timeout(timeout_ms or self.timeout)
+            await page.goto(url, wait_until='domcontentloaded')
+            html = await page.content()
+            final_url = page.url
+            return html, final_url
+        finally:
+            try:
+                await context.close()
+            except Exception:
+                pass
+
     async def stop(self):
         """Stop the browser"""
         try:

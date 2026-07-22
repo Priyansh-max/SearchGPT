@@ -1,38 +1,51 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
-import { 
-  performWebSearch, 
-  scrapeWebContent, 
-  analyzeContent, 
-  searchNews,
-  formatSearchResults,
-  formatScraperResults,
-  formatAnalyzerResults,
-  formatNewsResults
-} from './services/api';
+import AdminDashboard from './components/AdminDashboard';
+import SignIn from './components/SignIn';
+import AuthCallback from './components/AuthCallback';
+import Onboarding from './components/Onboarding';
+import ToastStack from './components/ToastStack';
+import { useToasts } from './hooks/useToasts';
+import { runPlaygroundQuery, formatPlaygroundResponse } from './services/api';
+
+const DEVELOPER_SOON_MESSAGE = 'Developer dashboard and API keys are coming soon.';
+
+const DeveloperComingSoonRoute = ({ showToast }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    showToast(DEVELOPER_SOON_MESSAGE, 'info');
+    navigate('/', { replace: true });
+  }, [navigate, showToast]);
+
+  return null;
+};
 
 function App() {
   const navigate = useNavigate();
+  const { toasts, showToast, removeToast } = useToasts();
 
   // State management
   const [query, setQuery] = useState('');
-  const [selectedTool, setSelectedTool] = useState(null);
+  const [selectedTool, setSelectedTool] = useState('search');
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState(null);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const inFlightRef = useRef(false);
   
   // Mock user name - can be replaced with actual user info from auth system
   const userName = "SearchGPT";
+  const handleDevelopersLocked = () => showToast(DEVELOPER_SOON_MESSAGE, 'info');
   
   // Handle initial search from landing page — go to playground then send
   const handleSearch = (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || inFlightRef.current) return;
     navigate('/c');
     sendMessage(query);
   };
@@ -40,8 +53,8 @@ function App() {
   // Handle sending messages from chat page
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    
+    if (!query.trim() || inFlightRef.current) return;
+
     sendMessage(query);
   };
   
@@ -52,7 +65,7 @@ function App() {
         return;
       } else {
         e.preventDefault(); // prevent newline
-        if (query.trim()) {
+        if (query.trim() && !inFlightRef.current) {
           sendMessage(query);
         }
       }
@@ -62,13 +75,16 @@ function App() {
   
   // Common message sending logic
   const sendMessage = async (text) => {
-    // Add user message
-    const userMessage = { 
-      id: Date.now(), 
-      text: text, 
-      isUser: true
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
+    const userMessage = {
+      id: Date.now(),
+      text,
+      isUser: true,
+      tool: selectedTool || 'search',
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     
     // Show typing indicator and set loading state
@@ -77,53 +93,42 @@ function App() {
     setLoadingStartTime(Date.now());
     
     try {
-      // Choose API based on selected tool
-      let response;
-      let formattedResponse;
-      
-      if (selectedTool === 'search') {
-        setLoadingMessage("Searching the web");
-        response = await performWebSearch(text);
-        formattedResponse = formatSearchResults(response);
-      } else if (selectedTool === 'scraper') {
-        setLoadingMessage("Extracting content from web pages");
-        response = await scrapeWebContent(text);
-        formattedResponse = formatScraperResults(response);
-      } else if (selectedTool === 'analyzer') {
-        setLoadingMessage("Analyzing content from multiple sources on the internet");
-        response = await analyzeContent(text);
-        formattedResponse = formatAnalyzerResults(response);
-      } else if (selectedTool === 'news') {
-        setLoadingMessage("Searching for news articles");
-        response = await searchNews(text);
-        formattedResponse = formatNewsResults(response);
-      } else {
-        // If no tool selected, provide a general response
-        setLoadingMessage("Processing your request");
+      const tool = selectedTool || 'search';
+      const loadingByTool = {
+        search: 'Searching and ranking sources',
+        scraper: 'Extracting clean page content',
+        analyzer: 'Researching and synthesizing context',
+        news: 'Finding recent coverage',
+      };
+      setLoadingMessage(loadingByTool[tool] || 'Running playground query');
 
-        //add a delay of 4 seconds before showing the loading message
-        const number = Math.random() * (3-1) + 1;
-        console.log(number);
-        await new Promise(resolve => setTimeout(resolve, number * 1000));
+      const response = await runPlaygroundQuery({ query: text, tool, synthesize: true, maxSources: 5 });
+      const formatted = formatPlaygroundResponse(response);
 
-        formattedResponse = getDefaultResponse(text);
-      }
-      
-      // Add AI response
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        text: formattedResponse,
-        isUser: false
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: formatted.text,
+        isUser: false,
+        sources: formatted.sources,
+        images: formatted.images,
+        meta: formatted.meta,
+        raw: formatted.raw,
       }]);
-      
+
     } catch (error) {
       console.error('API error:', error);
       
-      // Add error message
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        text: `I encountered an error while processing your request. Please try again or select a different tool.\n\nError details: ${error.message}`,
-        isUser: false
+      const detail = error.message || 'Request failed';
+      const isDemoBusy = detail.includes('Demo is at capacity');
+      const politeError = isDemoBusy
+        ? detail
+        : `I could not complete that request. Please try again or select a different tool.\n\nError details: ${detail}`;
+
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: politeError,
+        isUser: false,
+        meta: isDemoBusy ? { mode_label: 'Demo busy', tier: 'demo' } : undefined,
       }]);
     } finally {
       // Hide typing indicator and loading state
@@ -132,6 +137,8 @@ function App() {
       setLoadingStartTime(null);
       setLoadingMessage("");
       
+      inFlightRef.current = false;
+
       // Clear the input
       setQuery('');
     }
@@ -145,21 +152,14 @@ function App() {
     setIsLoading(false);
     setLoadingStartTime(null);
     setLoadingMessage('');
+    inFlightRef.current = false;
   };
 
-  // Default response when no tool is selected
-  const getDefaultResponse = (userText) => {
-    if (userText.toLowerCase().includes('search the web')) {
-      return "Yes I can search the web for you, Please select a tool and put on your requirements";
-    } else if (userText.toLowerCase().includes('hello') || userText.toLowerCase().includes('hi')) {
-      return "Hello! How can I help you today with web research?";
-    } else {
-      return "I am just a web research agent. I can't do general conversations at the moment.\nI can help you research things on the web. Select a tools as per your requirement and I will help you.\n\n- Web Search Tool: For general search queries\n- Web Scraper: To extract data from specific websites\n- Content Analyzer: To analyze content for relevance and reliability\n- News Aggregator: To find recent news on your topic";
-    }
-  };
+
 
   return (
     <div className="min-h-screen">
+      <ToastStack toasts={toasts} onDismiss={removeToast} />
       <Routes>
         <Route
           path="/"
@@ -191,9 +191,16 @@ function App() {
               selectedTool={selectedTool}
               setSelectedTool={setSelectedTool}
               onResetChat={handleResetChat}
+              onDevelopersLocked={handleDevelopersLocked}
             />
           }
         />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/developers" element={<DeveloperComingSoonRoute showToast={showToast} />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/keys" element={<DeveloperComingSoonRoute showToast={showToast} />} />
       </Routes>
     </div>
   );

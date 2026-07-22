@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Site typography: Geist for body/UI, Space Grotesk for headings, Geist Mono for code */
+@layer base {
+  body { font-family: 'Geist', system-ui, -apple-system, sans-serif; }
+  h1, h2, h3, h4, h5 { font-family: 'Space Grotesk', 'Geist', system-ui, sans-serif; }
+  code, kbd, pre, samp { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace; }
+}
+
 /* ========================================
    THEME PALETTE — Edit colors here
    ======================================== */

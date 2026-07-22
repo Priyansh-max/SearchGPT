@@ -2,9 +2,11 @@
  * Application configuration
  */
 
+const defaultApiBaseUrl = import.meta.env.DEV ? 'http://localhost:8000' : '';
+
 // API configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_BACKEND_URL,
+  BASE_URL: import.meta.env.VITE_BACKEND_URL || defaultApiBaseUrl,
   
   // Timeout for API requests in milliseconds
   TIMEOUT: 60000, // 60 seconds

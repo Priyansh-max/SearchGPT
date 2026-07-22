@@ -1,22 +1,31 @@
-version: '3.8'
+# SearchBot backend — engine container.
+#
+# Self-host: `cp .env.example .env`, fill the 3 required keys, then `docker compose up -d`.
+# All config is driven by .env (see .env.example) — nothing sensitive lives in this file.
 
 services:
-  searchgpt-backend:
+  backend:
     build: .
+    container_name: searchbot-backend
+    # Load ALL engine config (keys, RAG, concurrency, cache, auth mode) from .env.
+    env_file:
+      - .env
     ports:
+      # Self-host default: exposed on the host so you can call it directly.
+      # PUBLIC DROPLET: change to "127.0.0.1:8000:8000" so ONLY Caddy (TLS) can
+      # reach it, and let Caddy reverse-proxy https://api.searchbot.live -> :8000.
       - "8000:8000"
-    environment:
-      - DEBUG=False
-      - SELENIUM_HEADLESS=True
-      - SELENIUM_TIMEOUT=120
-      - CHROME_BIN=/usr/bin/google-chrome
-      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - SEARCH_RESULTS_LIMIT=20
-      - MAX_PAGES_TO_SCRAPE=20
-      - PYTHONUNBUFFERED=1
-      - DISPLAY=:99
     volumes:
+      # Persist managed API keys / accounts (AUTH_MODE=keystore) across restarts.
+      - ./data:/app/data
+      # Scrape debug artifacts (screenshots/HTML) — handy for triage.
       - ./debug:/app/debug
+    # Chromium needs a large /dev/shm or it crashes on content-heavy pages.
     shm_size: 2gb
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
