@@ -119,3 +119,57 @@ def test_persistence(tmp_path):
     s2 = LocalAccountStore(path=p)
     assert s2.get_by_email("a@b.com").id == u.id
     assert s2.validate_key(raw).id == k.id
+
+
+def test_account_store_can_select_supabase_backend(monkeypatch):
+    import services.accounts as accounts_module
+    from config import settings
+
+    accounts_module._store = None
+    monkeypatch.setattr(settings, "ACCOUNT_STORE_BACKEND", "supabase")
+    monkeypatch.setattr(settings, "SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setattr(settings, "SUPABASE_KEY", "service-role-key")
+    monkeypatch.setattr(settings, "ACCOUNT_MONTHLY_CREDITS", 123)
+
+    try:
+        store = accounts_module.get_account_store()
+        assert isinstance(store, accounts_module.SupabaseAccountStore)
+        assert store.monthly_quota == 123
+        assert store.base_url == "https://example.supabase.co/rest/v1"
+    finally:
+        accounts_module._store = None
+
+
+def test_supabase_backend_requires_credentials(monkeypatch):
+    import pytest
+    import services.accounts as accounts_module
+    from config import settings
+
+    accounts_module._store = None
+    monkeypatch.setattr(settings, "ACCOUNT_STORE_BACKEND", "supabase")
+    monkeypatch.setattr(settings, "SUPABASE_URL", "")
+    monkeypatch.setattr(settings, "SUPABASE_KEY", "")
+
+    try:
+        with pytest.raises(ValueError):
+            accounts_module.get_account_store()
+    finally:
+        accounts_module._store = None
+
+
+def test_update_onboarding_marks_user_complete():
+    s = LocalAccountStore(monthly_quota=1000)
+    u = s.create_user("a@b.com")
+    updated = s.update_onboarding(
+        u.id,
+        "Ada Lovelace",
+        "https://example.com/avatar.png",
+        "Twitter",
+        ["Deep research", "API access"],
+    )
+    assert updated.onboarding_completed is True
+    assert updated.name == "Ada Lovelace"
+    assert updated.picture == "https://example.com/avatar.png"
+    assert updated.heard_about == "Twitter"
+    assert updated.use_cases == ["Deep research", "API access"]
+    assert updated.public()["onboarding_completed"] is True
