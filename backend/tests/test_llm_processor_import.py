@@ -41,3 +41,42 @@ def test_ensure_model_raises_clearly_without_key(monkeypatch):
         assert False, "expected ValueError without GEMINI_API_KEY"
     except ValueError as e:
         assert "GEMINI_API_KEY" in str(e)
+
+
+def test_configured_gemini_model_skips_model_listing(monkeypatch):
+    sys.modules.pop("services.llm_processor", None)
+    from services.llm_processor import LLMProcessor
+    import services.llm_processor as mod
+
+    class FakeGenAI:
+        def __init__(self):
+            self.configured = False
+            self.listed = False
+            self.model_name = None
+            self.generation_config = None
+
+        def configure(self, api_key):
+            self.configured = api_key == "test-key"
+
+        def list_models(self):
+            self.listed = True
+            return []
+
+        def GenerativeModel(self, *, model_name, safety_settings, generation_config):
+            self.model_name = model_name
+            self.generation_config = generation_config
+            return object()
+
+    fake = FakeGenAI()
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(mod.settings, "GEMINI_MODEL", "gemini-3.5-flash-lite")
+    monkeypatch.setattr(mod, "genai", fake)
+
+    proc = LLMProcessor()
+    proc._ensure_model()
+
+    assert fake.configured is True
+    assert fake.listed is False
+    assert fake.model_name == "models/gemini-3.5-flash-lite"
+    assert "top_k" not in fake.generation_config
+

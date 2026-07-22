@@ -51,17 +51,24 @@ class LLMProcessor:
             raise ValueError("GEMINI_API_KEY is required")
 
         genai.configure(api_key=api_key)
-        available = [m.name for m in genai.list_models()
-                     if 'generateContent' in m.supported_generation_methods]
-
-        if 'models/gemini-2.0-flash' in available:
-            self.model_name = 'models/gemini-2.0-flash'
-        elif 'models/gemini-1.5-flash' in available:
-            self.model_name = 'models/gemini-1.5-flash'
-        elif 'models/gemini-1.0-pro' in available:
-            self.model_name = 'models/gemini-1.0-pro'
+        configured_model = (settings.GEMINI_MODEL or os.getenv("GEMINI_MODEL", "")).strip()
+        if configured_model:
+            self.model_name = self._normalize_model_name(configured_model)
         else:
-            self.model_name = available[0] if available else None
+            available = [m.name for m in genai.list_models()
+                         if 'generateContent' in m.supported_generation_methods]
+            preferred_models = [
+                'models/gemini-3.5-flash-lite',
+                'models/gemini-3.5-flash',
+                'models/gemini-3.1-flash-lite',
+                'models/gemini-2.5-flash',
+                'models/gemini-2.0-flash-lite',
+                'models/gemini-2.0-flash',
+                'models/gemini-1.5-flash',
+                'models/gemini-1.0-pro',
+            ]
+            self.model_name = next((m for m in preferred_models if m in available),
+                                   available[0] if available else None)
 
         if not self.model_name:
             raise ValueError("No suitable Gemini models available")
@@ -70,9 +77,22 @@ class LLMProcessor:
         self.model = genai.GenerativeModel(
             model_name=self.model_name,
             safety_settings=self._safety_settings,
-            generation_config=self._generation_config,
+            generation_config=self._generation_config_for_model(self.model_name),
         )
         return self.model
+
+    @staticmethod
+    def _normalize_model_name(model_name: str) -> str:
+        return model_name if model_name.startswith("models/") else f"models/{model_name}"
+
+    def _generation_config_for_model(self, model_name: str) -> Dict[str, Any]:
+        config = dict(self._generation_config)
+        bare_model = model_name.removeprefix("models/")
+        if bare_model.startswith("gemini-3."):
+            config.pop("temperature", None)
+            config.pop("top_p", None)
+            config.pop("top_k", None)
+        return config
 
     def _ensure_providers(self):
         """Build the Gemini -> OpenAI fallback chain on first use (OpenAI only if a key is set)."""
@@ -147,8 +167,8 @@ class LLMProcessor:
             logger.info(f"Query refined: '{original_query}' -> '{refined_query}'")
             return refined_query
             
-        except Exception as e:
-            logger.error(f"Error refining search query: {str(e)}")
+        except Exception:
+            logger.warning("LLM query refinement failed; using original query")
             return original_query
     
     async def process_search_results(self, query: str, search_results: List[Dict[str, Any]]) -> str:
@@ -176,15 +196,16 @@ class LLMProcessor:
             
             {results_text}
             
-            Please provide a the search results that you found on the web 
-            Your response should:
-            1. Mainly focused on providing as many web searched reference links as possible
-            2. Directly answer the user's question
-            3. Provide relevant context and information
-            4. Cite sources for key information (use the format [1], [2], etc.)
-            5. Include a "References" section at the end with numbered links
-            
-            Format your response in Markdown for readability.
+            Write a precise, source-backed answer to the user's query.
+            Requirements:
+            1. Use a clear Markdown structure: short direct answer, then bullet points for important details.
+            2. Keep it focused on web information and source-backed facts; do not drift into generic explanation.
+            3. Cite every factual claim with inline reference numbers like [1], [2].
+            4. Do not include a separate References/Sources section; the UI renders sources separately.
+            5. Prefer bullets over long paragraphs. Use bold labels when they improve scanability.
+            6. Avoid filler, caveats, and generic intro text.
+
+            Format your response in clean Markdown.
             """
             
             response = await self._generate_content(prompt)
@@ -196,8 +217,8 @@ class LLMProcessor:
                 
             return response
             
-        except Exception as e:
-            logger.error(f"Error processing search results: {str(e)}")
+        except Exception:
+            logger.warning("LLM search synthesis failed; using basic formatter")
             # Fallback to basic formatting
             return self._format_basic_results(query, search_results)
     
@@ -222,14 +243,15 @@ class LLMProcessor:
             
             {contents_text}
             
-            Please synthesize this information into a comprehensive response to the user's query.
-            Your response should:
-            1. Directly output the content in a way how a scrapper would output the content
-            2. output what is asked by the user exactly as it is
-            3. End with a "References" section at the end with numbered links to the scrapped content
-            4. Do not add any additional text or explanations
+            Synthesize the scraped content into a precise extraction summary for the user's query.
+            Requirements:
+            1. Start with a short result summary.
+            2. Add bullets for extracted facts, fields, code snippets, or assets found in the scraped pages.
+            3. If code appears in the source, preserve it in fenced Markdown code blocks with a language tag when obvious.
+            4. Cite claims with inline reference numbers like [1], [2].
+            5. Use only the supplied scraped content and do not add a separate References/Sources section.
 
-            Format your response in Markdown for readability.
+            Format your response in clean Markdown.
             """
             
             response = await self._generate_content(prompt)
@@ -241,8 +263,8 @@ class LLMProcessor:
                 
             return response
             
-        except Exception as e:
-            logger.error(f"Error processing scraped content: {str(e)}")
+        except Exception:
+            logger.warning("LLM scrape synthesis failed; using basic formatter")
             # Fallback to basic formatting
             return self._format_basic_scraped_content(query, scraped_results)
     
@@ -278,16 +300,24 @@ class LLMProcessor:
             
             {contents_text}
             
-            Based on these sources, please provide:
-            1. A concise summary (2-3 paragraphs) answering the query
-            2. A list of 5-7 key points extracted from the sources
-            
+            This is Deep Analysis mode. Produce a well-researched, source-backed report from the supplied sources.
+            Requirements:
+            1. Show that research was performed: explain the research path and what kinds of sources were compared.
+            2. Give a strong answer first, then structured bullets and detailed findings.
+            3. Include inline citation numbers like [1], [2] in summary, takeaways, and detailed findings.
+            4. Separate confirmed findings from gaps/caveats. Do not invent facts beyond the supplied content.
+            5. Make the output meaningfully deeper than Web Search: include 5-8 key takeaways and 6-10 detailed findings when sources support them.
+
             Format your response as a JSON object with the following structure EXACTLY:
             {{
-                "summary": "The concise summary text here",
-                "key_points": ["Key point 1", "Key point 2", ...]
+                "summary": "A 2-4 paragraph cited executive summary",
+                "research_steps": ["What source/category was checked and why", "..."],
+                "key_points": ["Cited key takeaway", "..."],
+                "detailed_findings": ["Cited deeper finding with context", "..."],
+                "source_notes": ["Brief source quality or disagreement note", "..."],
+                "limitations": ["Known gap or caveat from available sources", "..."]
             }}
-            
+
             Only return the JSON object, nothing else. Make sure your JSON is valid with proper quotes and formatting.
             """
 
@@ -314,6 +344,9 @@ class LLMProcessor:
                 
                 if "key_points" not in result:
                     result["key_points"] = []
+                for field in ("research_steps", "detailed_findings", "source_notes", "limitations"):
+                    if field not in result or not isinstance(result[field], list):
+                        result[field] = []
                     
                 result["sources"] = sources
                 return result
@@ -342,12 +375,16 @@ class LLMProcessor:
                 
                 return {
                     "summary": summary,
+                    "research_steps": [],
                     "key_points": key_points,
+                    "detailed_findings": [],
+                    "source_notes": [],
+                    "limitations": [],
                     "sources": sources
                 }
                 
-        except Exception as e:
-            logger.error(f"Error synthesizing information: {str(e)}")
+        except Exception:
+            logger.warning("LLM analysis synthesis failed; using basic formatter")
             # Create a basic summary from the content if possible
             try:
                 combined_content = ""
@@ -360,13 +397,21 @@ class LLMProcessor:
                 
                 return {
                     "summary": fallback_summary,
+                    "research_steps": [],
                     "key_points": ["Information could not be fully analyzed due to a processing error."],
+                    "detailed_findings": [],
+                    "source_notes": [],
+                    "limitations": [],
                     "sources": sources if 'sources' in locals() else []
                 }
             except:
                 return {
                     "summary": "An error occurred while synthesizing information.",
+                    "research_steps": [],
                     "key_points": [],
+                    "detailed_findings": [],
+                    "source_notes": [],
+                    "limitations": [],
                     "sources": sources if 'sources' in locals() else []
                 }
     
@@ -397,19 +442,16 @@ class LLMProcessor:
             
             {news_text}
             
-            Please provide a comprehensive overview of the news related to this query.
-            Your response should:
-            1. Summarize the key developments and trends
-            2. Highlight important details from multiple sources
-            3. Provide context and background if relevant
-            4. Cite sources for key information (use the format [1], [2], etc.)
-            5. Include a "References" section at the end with numbered links to articles
-            6. For each reference, format it as: [Title] - [Source] ([Date]) with a "Read more" link to the URL
-            
-            Example reference format:
-            1. Article Title - News Source (Publication Date) [Read more](URL)
-            
-            Format your response in Markdown for readability.
+            Write a lively but concise, source-backed news brief.
+            Requirements:
+            1. Start with the key development in 1-2 sentences.
+            2. Use bullets grouped under clear Markdown headings such as "What happened", "Why it matters", and "What to watch".
+            3. Cite every claim with inline reference numbers like [1], [2].
+            4. Include publication dates only when present in the article metadata.
+            5. Do not include a separate References/Sources section; the UI renders sources separately.
+            6. Avoid filler and speculation.
+
+            Format your response in clean Markdown.
             """
             
             response = await self._generate_content(prompt)
@@ -421,8 +463,8 @@ class LLMProcessor:
                 
             return response
             
-        except Exception as e:
-            logger.error(f"Error processing news results: {str(e)}")
+        except Exception:
+            logger.warning("LLM news synthesis failed; using basic formatter")
             # Fallback to basic formatting
             return self._format_basic_news(query, news_results)
     
@@ -437,7 +479,7 @@ class LLMProcessor:
             logger.info(f"LLM answered via: {result.provider}")
             return result.text
         except Exception as e:
-            logger.error(f"Error generating content from LLM: {str(e)}")
+            logger.warning("LLM fallback chain exhausted; using non-LLM formatter")
             raise
     
     def _format_basic_results(self, query: str, results: List[Dict[str, Any]]) -> str:

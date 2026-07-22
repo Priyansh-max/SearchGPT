@@ -52,7 +52,7 @@ class QueryRequest(BaseModel):
 
 
 async def verify_api_key(x_api_key: Optional[str] = Header(default=None)) -> str:
-    """X-API-Key gate honoring AUTH_MODE: off | static | keystore | supabase.
+    """X-API-Key gate honoring AUTH_MODE: off | static | keystore | accounts | supabase.
 
     Returns an identity string (key id, 'static', or 'anonymous') used for analytics.
     """
@@ -75,6 +75,12 @@ async def verify_api_key(x_api_key: Optional[str] = Header(default=None)) -> str
             raise HTTPException(status_code=429, detail="quota exceeded for this key")
         store.record_use(rec)
         return rec.id  # per-key identity for analytics
+    if mode == "accounts":
+        from services.accounts import get_account_store
+        rec = get_account_store().validate_key(x_api_key or "")
+        if not rec:
+            raise HTTPException(status_code=401, detail="Invalid or missing API key")
+        return rec.id
     if mode == "supabase":
         # NEEDS KEYS: validate against the Supabase api_keys table + quota.
         raise HTTPException(status_code=501, detail="Supabase auth not configured")
@@ -130,7 +136,7 @@ async def run_query(mode: str, query: str, options: QueryOptions, synthesize: bo
     meta["link_mode"] = link_mode
     meta["sources_used"] = len(sources)
     data = {"sources": [
-        {"url": s.get("url"), "title": s.get("title"), "content": s.get("content")}
+        {"url": s.get("url"), "title": s.get("title"), "content": s.get("content"), "image": s.get("image") or s.get("top_image") or "", "images": s.get("images") or []}
         for s in sources
     ]}
     out = {"mode": mode, "query": query, "data": data, "meta": meta}
@@ -149,6 +155,7 @@ async def run_query(mode: str, query: str, options: QueryOptions, synthesize: bo
 
 @router.post("/query")
 async def query_endpoint(req: QueryRequest, request: Request,
+                         x_api_key: Optional[str] = Header(default=None),
                          identity: str = Depends(verify_api_key)):
     if req.mode not in VALID_MODES:
         raise HTTPException(status_code=400, detail=f"invalid mode '{req.mode}' (use {sorted(VALID_MODES)})")
@@ -157,6 +164,8 @@ async def query_endpoint(req: QueryRequest, request: Request,
 
     started = time.time()
     synthesize = req.options.synthesize or req.mode == "analyze"
+    if (settings.AUTH_MODE or "static").lower() == "accounts":
+        identity = _charge_account_key(x_api_key, req.mode, synthesize)
     key = make_cache_key(req.mode, req.query, {
         "synthesize": synthesize,
         "max_sources": req.options.max_sources,
@@ -203,3 +212,20 @@ def _record_event(request, identity, req, out, started) -> None:
         ))
     except Exception as e:  # analytics must never break the API
         logger.warning(f"analytics record failed: {e}")
+
+
+def _charge_account_key(raw_key: Optional[str], mode: str, synthesize: bool) -> str:
+    """Enforce hosted account key scopes and shared monthly credits."""
+    from services.accounts import get_account_store
+    store = get_account_store()
+    rec = store.validate_key(raw_key or "")
+    if not rec:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    ok, reason, remaining = store.charge(rec, mode, synthesize)
+    if ok:
+        return rec.id
+    if reason == "scope":
+        raise HTTPException(status_code=403, detail=f"key is not allowed to use mode '{mode}'")
+    if reason == "credits":
+        raise HTTPException(status_code=429, detail=f"monthly credits exhausted ({remaining} remaining)")
+    raise HTTPException(status_code=401, detail="Invalid API key account")

@@ -13,6 +13,9 @@ from api.routes import router as api_router
 from api.v1 import router as v1_router
 from api.admin import router as admin_router
 from api.keys import router as keys_router
+from api.auth import router as auth_router
+from api.account import router as account_router
+from api.playground import router as playground_router
 from config import settings
 
 # Load environment variables
@@ -38,7 +41,7 @@ app = FastAPI(
 # Add CORS middleware to allow requests from frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with actual frontend URL
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,7 +51,10 @@ app.add_middleware(
 app.include_router(api_router)
 app.include_router(v1_router)     # Public Data API v1 (Problem 4)
 app.include_router(admin_router)  # Admin analytics dashboard API (Problem 5)
-app.include_router(keys_router)   # API key management (Developers)
+app.include_router(keys_router)   # API key management (admin/keystore)
+app.include_router(auth_router)   # User auth (Developers)
+app.include_router(account_router)  # Signed-in account keys/usage
+app.include_router(playground_router)  # Anonymous public demo playground lane
 
 # Root endpoint
 @app.get("/")

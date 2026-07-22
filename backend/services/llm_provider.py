@@ -29,6 +29,11 @@ class ProviderError(Exception):
         self.provider = provider
 
 
+def _short_error(err: Exception, limit: int = 180) -> str:
+    text = str(err).replace("\n", " ").strip()
+    return text[:limit] + ("..." if len(text) > limit else "")
+
+
 @dataclass
 class GenResult:
     text: str
@@ -67,10 +72,10 @@ async def generate_with_fallback(
             logger.warning("LLM provider '%s' returned empty/blocked; trying next", p.name)
         except ProviderError as e:
             last_exc = e
-            logger.warning("LLM provider '%s' failed (%s); trying next", p.name, e)
+            logger.warning("LLM provider '%s' failed (%s); trying next", p.name, _short_error(e))
         except Exception as e:  # SDK-specific errors → normalize
             last_exc = ProviderError(str(e), rate_limited=_looks_rate_limited(e), provider=p.name)
-            logger.warning("LLM provider '%s' errored (%s); trying next", p.name, e)
+            logger.warning("LLM provider '%s' errored (%s); trying next", p.name, _short_error(e))
 
     raise last_exc or ProviderError("all providers failed")
 

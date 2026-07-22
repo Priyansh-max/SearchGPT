@@ -2,12 +2,19 @@ import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+
+def _csv_env(name: str, default: str = "*") -> list[str]:
+    raw = os.getenv(name, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
 # Load environment variables
 load_dotenv()
 
 class Settings(BaseModel):
     # App settings
     APP_NAME: str = "SearchGPT Agent"
+    AUTH_BRAND_NAME: str = os.getenv("AUTH_BRAND_NAME", "SearchBot")
+    AUTH_PUBLIC_URL: str = os.getenv("AUTH_PUBLIC_URL", "")
     DEBUG: bool = os.getenv("DEBUG", "False").lower() in ["true", "1", "t"]
     
     # API settings
@@ -34,6 +41,7 @@ class Settings(BaseModel):
     
     # LLM settings
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "models/gemini-3.5-flash-lite")
     
     # News API settings
     NEWS_API_KEY: str = os.getenv("NEWS_API_KEY", "")
@@ -51,7 +59,7 @@ class Settings(BaseModel):
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     
     # CORS settings
-    CORS_ORIGINS: list = ["*"]  # In production, replace with specific origins
+    CORS_ORIGINS: list[str] = _csv_env("CORS_ORIGINS", "*")
     
     # Cache settings
     CACHE_ENABLED: bool = os.getenv("CACHE_ENABLED", "True").lower() in ["true", "1", "t"]
@@ -88,7 +96,7 @@ class Settings(BaseModel):
     BLOCK_RESOURCES: bool = os.getenv("BLOCK_RESOURCES", "True").lower() in ["true", "1", "t"]
 
     # Auth / hosted add-ons (toggles — OFF-friendly defaults keep self-host simple)
-    AUTH_MODE: str = os.getenv("AUTH_MODE", "static")  # supabase | keystore | static | off
+    AUTH_MODE: str = os.getenv("AUTH_MODE", "static")  # accounts | supabase | keystore | static | off
     API_KEY: str = os.getenv("API_KEY", "")  # static self-host key (AUTH_MODE=static)
 
     # Key store (AUTH_MODE=keystore) — managed multi-key + usage/quota
@@ -97,6 +105,7 @@ class Settings(BaseModel):
 
     # Accounts (AUTH_MODE=accounts) — multi-user, shared monthly credit pool, scoped keys
     ACCOUNT_STORE_PATH: str = os.getenv("ACCOUNT_STORE_PATH", "data/accounts.json")
+    ACCOUNT_STORE_BACKEND: str = os.getenv("ACCOUNT_STORE_BACKEND", "local")  # local | supabase
     ACCOUNT_MONTHLY_CREDITS: int = int(os.getenv("ACCOUNT_MONTHLY_CREDITS", "1000"))
 
     # Self-handled Google OAuth (approach B) + our own user sessions
@@ -105,6 +114,8 @@ class Settings(BaseModel):
     GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/auth/google/callback")
     SESSION_SECRET: str = os.getenv("SESSION_SECRET", "")  # signs user session JWTs
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "")
     QUOTA_ENABLED: bool = os.getenv("QUOTA_ENABLED", "False").lower() in ["true", "1", "t"]
     ANALYTICS_ENABLED: bool = os.getenv("ANALYTICS_ENABLED", "False").lower() in ["true", "1", "t"]
 

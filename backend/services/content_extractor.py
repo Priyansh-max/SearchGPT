@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import newspaper
 from newspaper import Article
 import time
+from urllib.parse import urljoin
 
 from utils.playwright_utils import playwright_browser
 from utils.text_utils import TextProcessor
@@ -26,6 +27,44 @@ class ContentExtractor:
     """
     Service to extract content from web pages using Playwright
     """
+
+    @staticmethod
+    def _is_content_image(url: str) -> bool:
+        if not url or not str(url).startswith(("http://", "https://")):
+            return False
+        lowered = str(url).lower()
+        blocked = ("/favicon", "favicon.", "apple-touch-icon", "logo.svg", "sprite", "data:image")
+        return not any(token in lowered for token in blocked)
+
+    def _extract_images_from_soup(self, soup, base_url: str) -> List[Dict[str, str]]:
+        images: List[Dict[str, str]] = []
+        seen = set()
+
+        selectors = [
+            ("meta[property='og:image']", "content"),
+            ("meta[name='twitter:image']", "content"),
+            ("meta[property='twitter:image']", "content"),
+            ("article img", "src"),
+            ("main img", "src"),
+            ("img", "src"),
+        ]
+        for selector, attr in selectors:
+            for tag in soup.select(selector):
+                src = tag.get(attr) or tag.get("data-src") or tag.get("data-original") or ""
+                if not src:
+                    continue
+                absolute = urljoin(base_url, src)
+                if absolute in seen or not self._is_content_image(absolute):
+                    continue
+                seen.add(absolute)
+                images.append({
+                    "url": absolute,
+                    "alt": tag.get("alt") or tag.get("title") or "",
+                    "source_url": base_url,
+                })
+                if len(images) >= 12:
+                    return images
+        return images
     
     def __init__(self):
         self.web_searcher = web_searcher
@@ -91,6 +130,11 @@ class ContentExtractor:
                 if len(content) < 500:
                     raise Exception("Content too short, trying with Playwright")
                     
+                article_images = [
+                    {"url": img, "alt": "", "source_url": url}
+                    for img in ([article.top_image] + list(article.images or []))
+                    if self._is_content_image(img)
+                ]
                 metadata = {
                     "published_date": article.publish_date.isoformat() if article.publish_date else None,
                     "authors": article.authors,
@@ -118,6 +162,7 @@ class ContentExtractor:
                 # Extract title
                 title_tag = soup.find('title')
                 title = title_tag.text if title_tag else "No title"
+                article_images = self._extract_images_from_soup(soup, final_url or url)
                 
                 # Try to find main content
                 main_content = None
@@ -165,6 +210,9 @@ class ContentExtractor:
                 "url": url,
                 "title": title,
                 "content": content,
+                "image": article_images[0]["url"] if article_images else "",
+                "top_image": article_images[0]["url"] if article_images else "",
+                "images": article_images,
                 "metadata": metadata
             }
             
